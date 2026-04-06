@@ -1,0 +1,140 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  TRAINER
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum TrainerRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  ENDED
+}
+
+model User {
+  id           String    @id @default(uuid())
+  firstName    String
+  lastName     String
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(USER)
+  gender       Gender?
+  birthDate    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions                UserSession[]
+  sentTrainerRequests     TrainerRequest[]    @relation("sentTrainerRequests")
+  receivedTrainerRequests TrainerRequest[]    @relation("receivedTrainerRequests")
+  playerAssignments       TrainerAssignment[] @relation("playerAssignments")
+  trainerAssignments      TrainerAssignment[] @relation("trainerAssignments")
+  trainerProfile          TrainerProfile?
+
+  @@index([email])
+}
+
+model TrainerProfile {
+  id          String  @id @default(uuid())
+  userId      String  @unique
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  certificates TrainerCertificate[]
+}
+
+model TrainerCertificate {
+  id        String @id @default(uuid())
+  profileId String
+  fileName  String
+  mimeType  String
+  path      String
+
+  createdAt DateTime @default(now())
+
+  profile TrainerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model UserSession {
+  id               String    @id @default(uuid())
+  userId           String
+  refreshTokenHash String    @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model TrainerRequest {
+  id        String               @id @default(uuid())
+  playerId  String
+  trainerId String
+  status    TrainerRequestStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  player  User @relation("sentTrainerRequests", fields: [playerId], references: [id], onDelete: Cascade)
+  trainer User @relation("receivedTrainerRequests", fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, trainerId, status])
+  @@index([playerId])
+  @@index([trainerId])
+}
+
+model TrainerAssignment {
+  id        String           @id @default(uuid())
+  playerId  String
+  trainerId String
+  status    AssignmentStatus @default(ACTIVE)
+  startedAt DateTime         @default(now())
+  endedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  player  User @relation("playerAssignments", fields: [playerId], references: [id], onDelete: Cascade)
+  trainer User @relation("trainerAssignments", fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
+  @@index([trainerId])
+  @@index([status])
+}
