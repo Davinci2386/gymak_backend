@@ -138,3 +138,72 @@ model TrainerAssignment {
   @@index([trainerId])
   @@index([status])
 }
+
+model WorkoutPlan {
+  id        String      @id @default(uuid())
+  slug      String      @unique
+  title     String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  days      WorkoutDay[]
+}
+
+model WorkoutDay {
+  id        String            @id @default(uuid())
+  planId    String
+  dayNumber Int
+  label     String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  plan      WorkoutPlan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  exercises WorkoutExercise[]
+
+  @@unique([planId, dayNumber])
+  @@index([planId])
+}
+
+model WorkoutExercise {
+  id          String    @id @default(uuid())
+  dayId       String
+  name        String
+  description String    @default("")
+  imageUrls   String[]  @default([])
+  videoUrl    String?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  day         WorkoutDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  @@index([dayId])
+}
+
+enum MealSection {
+  BREAKFAST
+  LUNCH
+  DINNER
+}
+
+model NutritionMeal {
+  id          String                @id @default(uuid())
+  section     MealSection
+  name        String
+  imageUrl    String
+  calories    Int
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  ingredients NutritionIngredient[]
+
+  @@index([section])
+}
+
+model NutritionIngredient {
+  id        String        @id @default(uuid())
+  mealId    String
+  name      String
+  quantity  String
+  calories  Int
+  sortOrder Int           @default(0)
+  meal      NutritionMeal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@index([mealId])
+}
