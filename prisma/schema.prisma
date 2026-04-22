@@ -38,6 +38,19 @@ enum AssignmentStatus {
   ENDED
 }
 
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
 model User {
   id           String    @id @default(uuid())
   firstName    String
@@ -57,6 +70,8 @@ model User {
   playerAssignments       TrainerAssignment[] @relation("playerAssignments")
   trainerAssignments      TrainerAssignment[] @relation("trainerAssignments")
   trainerProfile          TrainerProfile?
+  subscriptions           Subscription[]
+  payments                Payment[]
 
   @@index([email])
 }
@@ -206,4 +221,72 @@ model NutritionIngredient {
   meal      NutritionMeal @relation(fields: [mealId], references: [id], onDelete: Cascade)
 
   @@index([mealId])
+}
+
+model SubscriptionPlan {
+  id          String @id @default(uuid())
+  name        String @unique
+  description String?
+  price       Int    // بـ cents (الحد الأدنى للـ Stripe)
+  durationDays Int    // مدة الاشتراك بـ أيام
+  features    String[] @default([])
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
+  payments      Payment[]
+
+  @@index([isActive])
+}
+
+model Subscription {
+  id              String               @id @default(uuid())
+  userId          String
+  planId          String
+  status          SubscriptionStatus   @default(ACTIVE)
+  stripeCustomerId String?
+  startDate       DateTime             @default(now())
+  endDate         DateTime
+  cancelledAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan  SubscriptionPlan   @relation(fields: [planId], references: [id])
+  payments Payment[]
+
+  @@unique([userId, planId, status])
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+  @@index([endDate])
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  userId            String
+  subscriptionId    String?
+  planId            String
+  status            PaymentStatus @default(PENDING)
+  amount            Int           // بـ cents
+  stripePaymentIntentId String?  @unique
+  stripeChargeId    String?       @unique
+  currency          String        @default("USD")
+  errorMessage      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+  plan         SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([planId])
+  @@index([status])
+  @@index([stripePaymentIntentId])
 }

@@ -3,6 +3,7 @@ const notFound = require('./notFound');
 const { auth, authorize } = require('./auth');
 const validate = require('./validate');
 const requireActiveAssignment = require('./requireActiveAssignment');
+const { checkActiveSubscription, checkSubscriptionPlan } = require('./subscription');
 
 module.exports = {
   errorHandler,
@@ -11,4 +12,7 @@ module.exports = {
   authorize,
   validate,
   requireActiveAssignment,
+  checkActiveSubscription,
+  checkSubscriptionPlan,
 };
+
