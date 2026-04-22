@@ -1,21 +1,57 @@
 const { Router } = require('express');
 const { auth, authorize, validate } = require('../../../middleware');
-const { createRequestSchema } = require('../validators/trainerRequest.schemas');
-const trainerRequestController = require('../controller/trainerRequest.controller');
+const {
+  createPlanSchema,
+  updatePlanSchema,
+  createPaymentIntentSchema,
+} = require('../validators/subscription.schemas');
+const subscriptionController = require('../controller/subscription.controller');
+const paymentController = require('../../payment/controller/payment.controller');
 
 const router = Router();
 
-// Player → request a trainer
-router.post('/trainer-requests', auth, authorize('USER'), validate(createRequestSchema), trainerRequestController.create);
-router.get('/trainer-requests/me', auth, authorize('USER'), trainerRequestController.myRequests);
-router.post('/trainer-requests/:requestId/cancel', auth, authorize('USER'), trainerRequestController.cancel);
+// === Public Endpoints ===
+// List all active subscription plans
+router.get('/plans', subscriptionController.listPlans);
 
-// Trainer → inbox + approve/reject
-router.get('/trainer-requests/inbox', auth, authorize('TRAINER'), trainerRequestController.inbox);
-router.post('/trainer-requests/:requestId/approve', auth, authorize('TRAINER'), trainerRequestController.approve);
-router.post('/trainer-requests/:requestId/reject', auth, authorize('TRAINER'), trainerRequestController.reject);
+// === User Endpoints ===
+// Get current user's subscription
+router.get('/me', auth, subscriptionController.getMySubscription);
 
-// Player → current assignment
-router.get('/assignment/me', auth, authorize('USER'), trainerRequestController.myAssignment);
+// Cancel subscription
+router.post('/cancel', auth, subscriptionController.cancelSubscription);
+
+// Create payment intent for subscription purchase
+router.post('/create-payment', auth, validate(createPaymentIntentSchema), paymentController.createPaymentIntent);
+
+// Get payment history
+router.get('/payments/history', auth, paymentController.getPaymentHistory);
+
+// === Admin Endpoints ===
+// Create new subscription plan
+router.post(
+  '/plans',
+  auth,
+  authorize('ADMIN'),
+  validate(createPlanSchema),
+  subscriptionController.createPlan
+);
+
+// Update subscription plan
+router.put(
+  '/plans/:planId',
+  auth,
+  authorize('ADMIN'),
+  validate(updatePlanSchema),
+  subscriptionController.updatePlan
+);
+
+// Refund payment (Admin only)
+router.post(
+  '/payments/:paymentId/refund',
+  auth,
+  authorize('ADMIN'),
+  paymentController.refundPayment
+);
 
 module.exports = router;

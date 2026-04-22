@@ -14,6 +14,12 @@ const locationRoutes = require('./modules/location/routes/location.routes');
 
 const app = express();
 
+// ⚠️ CRITICAL: Webhook must receive raw body for signature verification
+app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), (req, res, next) => {
+  req.rawBody = req.body;
+  express.json()(req, res, next);
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

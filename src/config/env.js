@@ -9,12 +9,13 @@ const env = {
   JWT_SECRET: process.env.JWT_SECRET,
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '1h',
 
-  // TODO: Add Stripe keys
-  // STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
-  // STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+  // Stripe Configuration (Test Mode)
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+  STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || '',
 
-  // TODO: Add Firebase config
-  // FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
+  // Application URLs
+  APP_URL: process.env.APP_URL || 'http://localhost:3000',
 };
 
 module.exports = env;

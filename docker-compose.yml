@@ -7,9 +7,11 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: development
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
       PORT: 3000
-      DATABASE_URL: postgresql://workout_user:workout_pass@postgres:5432/workout_db
-      JWT_SECRET: change_me_in_production
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: 1h
     depends_on:
       postgres:
