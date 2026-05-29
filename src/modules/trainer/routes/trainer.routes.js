@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const trainerController = require('../controller/trainer.controller');
 const { validate } = require('../../../middleware');
-const { trainerRegisterSchema } = require('../validators/trainerAuth.schemas');
+const { trainerRegisterSchema, trainerLoginSchema } = require('../validators/trainerAuth.schemas');
 const trainerAuthController = require('../controller/trainerAuth.controller');
 const upload = require('../middleware/uploadCertificates');
 
@@ -17,5 +17,7 @@ router.post(
   validate(trainerRegisterSchema),
   trainerAuthController.register,
 );
+
+router.post('/auth/login', validate(trainerLoginSchema), trainerAuthController.login);
 
 module.exports = router;

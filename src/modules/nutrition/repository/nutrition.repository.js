@@ -13,6 +13,18 @@ function findAllMealsWithIngredients() {
   });
 }
 
+function findMealsForPlayerAndTrainer({ playerId, trainerId, section }) {
+  return prisma.nutritionMeal.findMany({
+    where: {
+      playerId,
+      trainerId,
+      ...(section ? { section } : {}),
+    },
+    include: mealInclude,
+    orderBy: [{ section: 'asc' }, { name: 'asc' }],
+  });
+}
+
 function findMealsBySection(section) {
   return prisma.nutritionMeal.findMany({
     where: { section },
@@ -28,9 +40,11 @@ function findMealById(id) {
   });
 }
 
-function createMeal({ section, name, imageUrl, calories, ingredients }) {
+function createMeal({ playerId, trainerId, section, name, imageUrl, calories, ingredients }) {
   return prisma.nutritionMeal.create({
     data: {
+      playerId,
+      trainerId,
       section,
       name,
       imageUrl,
@@ -89,6 +103,7 @@ function deleteMeal(id) {
 
 module.exports = {
   findAllMealsWithIngredients,
+  findMealsForPlayerAndTrainer,
   findMealsBySection,
   findMealById,
   createMeal,

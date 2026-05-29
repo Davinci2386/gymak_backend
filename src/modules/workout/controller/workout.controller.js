@@ -9,7 +9,10 @@ function normalizeVideoUrl(videoUrl) {
 
 async function getWorkoutPlan(req, res, next) {
   try {
-    const plan = await workoutService.getPublicPlan();
+    const plan = await workoutService.getAssignedPlan({
+      playerId: req.user.id,
+      trainerId: req.assignment.trainerId,
+    });
     return ApiResponse.success(res, {
       message: 'Workout plan',
       data: { plan },
@@ -19,9 +22,42 @@ async function getWorkoutPlan(req, res, next) {
   }
 }
 
+async function getTrainerPlayerPlan(req, res, next) {
+  try {
+    const plan = await workoutService.getTrainerPlayerPlan({
+      trainerId: req.user.id,
+      playerId: req.params.playerId,
+    });
+    return ApiResponse.success(res, {
+      message: 'Workout plan',
+      data: { plan },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function listCatalogExercises(req, res, next) {
+  try {
+    const exercises = await workoutService.listCatalogExercises({
+      muscleGroup: req.query.muscleGroup,
+    });
+    return ApiResponse.success(res, {
+      message: 'Workout catalog exercises',
+      data: { exercises },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function createDay(req, res, next) {
   try {
-    const day = await workoutService.createDay(req.body);
+    const day = await workoutService.createDay({
+      trainerId: req.user.id,
+      playerId: req.params.playerId,
+      ...req.body,
+    });
     return ApiResponse.created(res, {
       message: 'Day created',
       data: { day },
@@ -33,7 +69,11 @@ async function createDay(req, res, next) {
 
 async function updateDay(req, res, next) {
   try {
-    const day = await workoutService.updateDay(req.params.dayId, req.body);
+    const day = await workoutService.updateDay({
+      trainerId: req.user.id,
+      dayId: req.params.dayId,
+      ...req.body,
+    });
     return ApiResponse.success(res, {
       message: 'Day updated',
       data: { day },
@@ -45,7 +85,10 @@ async function updateDay(req, res, next) {
 
 async function deleteDay(req, res, next) {
   try {
-    await workoutService.deleteDay(req.params.dayId);
+    await workoutService.deleteDay({
+      trainerId: req.user.id,
+      dayId: req.params.dayId,
+    });
     return ApiResponse.success(res, {
       message: 'Day deleted',
       data: null,
@@ -58,9 +101,29 @@ async function deleteDay(req, res, next) {
 async function createExercise(req, res, next) {
   try {
     const body = { ...req.body, videoUrl: normalizeVideoUrl(req.body.videoUrl) };
-    const exercise = await workoutService.createExercise(req.params.dayId, body);
+    const exercise = await workoutService.createExercise({
+      trainerId: req.user.id,
+      dayId: req.params.dayId,
+      ...body,
+    });
     return ApiResponse.created(res, {
       message: 'Exercise created',
+      data: { exercise },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function createExerciseFromCatalog(req, res, next) {
+  try {
+    const exercise = await workoutService.createExerciseFromCatalog({
+      trainerId: req.user.id,
+      dayId: req.params.dayId,
+      ...req.body,
+    });
+    return ApiResponse.created(res, {
+      message: 'Exercise added from catalog',
       data: { exercise },
     });
   } catch (err) {
@@ -74,7 +137,11 @@ async function updateExercise(req, res, next) {
     if (payload.videoUrl !== undefined) {
       payload.videoUrl = normalizeVideoUrl(payload.videoUrl);
     }
-    const exercise = await workoutService.updateExercise(req.params.exerciseId, payload);
+    const exercise = await workoutService.updateExercise({
+      trainerId: req.user.id,
+      exerciseId: req.params.exerciseId,
+      payload,
+    });
     return ApiResponse.success(res, {
       message: 'Exercise updated',
       data: { exercise },
@@ -86,7 +153,10 @@ async function updateExercise(req, res, next) {
 
 async function deleteExercise(req, res, next) {
   try {
-    await workoutService.deleteExercise(req.params.exerciseId);
+    await workoutService.deleteExercise({
+      trainerId: req.user.id,
+      exerciseId: req.params.exerciseId,
+    });
     return ApiResponse.success(res, {
       message: 'Exercise deleted',
       data: null,
@@ -98,10 +168,13 @@ async function deleteExercise(req, res, next) {
 
 module.exports = {
   getWorkoutPlan,
+  getTrainerPlayerPlan,
+  listCatalogExercises,
   createDay,
   updateDay,
   deleteDay,
   createExercise,
+  createExerciseFromCatalog,
   updateExercise,
   deleteExercise,
 };

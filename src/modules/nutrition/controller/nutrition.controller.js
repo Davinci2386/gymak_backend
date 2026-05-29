@@ -3,9 +3,13 @@ const nutritionService = require('../service/nutrition.service');
 
 async function listMeals(req, res, next) {
   try {
-    const data = await nutritionService.listCatalog(req.query.section);
+    const data = await nutritionService.listAssignedMeals({
+      playerId: req.user.id,
+      trainerId: req.assignment.trainerId,
+      querySection: req.query.section,
+    });
     return ApiResponse.success(res, {
-      message: 'Nutrition catalog',
+      message: 'Nutrition plan',
       data,
     });
   } catch (err) {
@@ -15,7 +19,11 @@ async function listMeals(req, res, next) {
 
 async function getMeal(req, res, next) {
   try {
-    const result = await nutritionService.getMealById(req.params.mealId);
+    const result = await nutritionService.getMealForPlayer({
+      mealId: req.params.mealId,
+      playerId: req.user.id,
+      trainerId: req.assignment.trainerId,
+    });
     return ApiResponse.success(res, {
       message: 'Meal',
       data: result,
@@ -25,9 +33,29 @@ async function getMeal(req, res, next) {
   }
 }
 
+async function listTrainerPlayerMeals(req, res, next) {
+  try {
+    const data = await nutritionService.listTrainerPlayerMeals({
+      trainerId: req.user.id,
+      playerId: req.params.playerId,
+      querySection: req.query.section,
+    });
+    return ApiResponse.success(res, {
+      message: 'Nutrition plan',
+      data,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function createMeal(req, res, next) {
   try {
-    const result = await nutritionService.createMeal(req.body);
+    const result = await nutritionService.createMeal({
+      trainerId: req.user.id,
+      playerId: req.params.playerId,
+      payload: req.body,
+    });
     return ApiResponse.created(res, {
       message: 'Meal created',
       data: result,
@@ -39,7 +67,11 @@ async function createMeal(req, res, next) {
 
 async function updateMeal(req, res, next) {
   try {
-    const result = await nutritionService.updateMeal(req.params.mealId, req.body);
+    const result = await nutritionService.updateMeal({
+      trainerId: req.user.id,
+      mealId: req.params.mealId,
+      payload: req.body,
+    });
     return ApiResponse.success(res, {
       message: 'Meal updated',
       data: result,
@@ -51,7 +83,10 @@ async function updateMeal(req, res, next) {
 
 async function deleteMeal(req, res, next) {
   try {
-    await nutritionService.deleteMeal(req.params.mealId);
+    await nutritionService.deleteMeal({
+      trainerId: req.user.id,
+      mealId: req.params.mealId,
+    });
     return ApiResponse.success(res, {
       message: 'Meal deleted',
       data: null,
@@ -64,6 +99,7 @@ async function deleteMeal(req, res, next) {
 module.exports = {
   listMeals,
   getMeal,
+  listTrainerPlayerMeals,
   createMeal,
   updateMeal,
   deleteMeal,

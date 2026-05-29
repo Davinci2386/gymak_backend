@@ -6,7 +6,9 @@ const {
   createPaymentIntentSchema,
 } = require('../validators/subscription.schemas');
 const subscriptionController = require('../controller/subscription.controller');
+const trainerRequestController = require('../controller/trainerRequest.controller');
 const paymentController = require('../../payment/controller/payment.controller');
+const { createRequestSchema } = require('../validators/trainerRequest.schemas');
 
 const router = Router();
 
@@ -26,6 +28,21 @@ router.post('/create-payment', auth, validate(createPaymentIntentSchema), paymen
 
 // Get payment history
 router.get('/payments/history', auth, paymentController.getPaymentHistory);
+
+// Request / assignment flow between players and trainers
+router.post(
+  '/trainer-requests',
+  auth,
+  authorize('USER'),
+  validate(createRequestSchema),
+  trainerRequestController.create
+);
+router.get('/trainer-requests/me', auth, authorize('USER'), trainerRequestController.myRequests);
+router.post('/trainer-requests/:requestId/cancel', auth, authorize('USER'), trainerRequestController.cancel);
+router.get('/trainer-requests/inbox', auth, authorize('TRAINER'), trainerRequestController.inbox);
+router.post('/trainer-requests/:requestId/approve', auth, authorize('TRAINER'), trainerRequestController.approve);
+router.post('/trainer-requests/:requestId/reject', auth, authorize('TRAINER'), trainerRequestController.reject);
+router.get('/assignment/me', auth, authorize('USER'), trainerRequestController.myAssignment);
 
 // === Admin Endpoints ===
 // Create new subscription plan

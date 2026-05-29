@@ -1,21 +1,24 @@
 const { Router } = require('express');
-const { auth, authorize, validate } = require('../../../middleware');
+const { auth, authorize, requireActiveAssignment, validate } = require('../../../middleware');
 const workoutController = require('../controller/workout.controller');
 const {
   createDaySchema,
   updateDaySchema,
   createExerciseSchema,
   updateExerciseSchema,
+  addExerciseFromCatalogSchema,
 } = require('../validators/workout.schemas');
 
 const router = Router();
 
-/** Public: multi-day plan with exercises from the database. */
-router.get('/plan', workoutController.getWorkoutPlan);
+router.get('/plan', auth, authorize('USER'), requireActiveAssignment, workoutController.getWorkoutPlan);
 
 const trainer = [auth, authorize('TRAINER')];
 
-router.post('/days', trainer, validate(createDaySchema), workoutController.createDay);
+router.get('/catalog/exercises', trainer, workoutController.listCatalogExercises);
+
+router.get('/players/:playerId/plan', trainer, workoutController.getTrainerPlayerPlan);
+router.post('/players/:playerId/days', trainer, validate(createDaySchema), workoutController.createDay);
 router.put('/days/:dayId', trainer, validate(updateDaySchema), workoutController.updateDay);
 router.delete('/days/:dayId', trainer, workoutController.deleteDay);
 
@@ -24,6 +27,12 @@ router.post(
   trainer,
   validate(createExerciseSchema),
   workoutController.createExercise,
+);
+router.post(
+  '/days/:dayId/exercises/from-catalog',
+  trainer,
+  validate(addExerciseFromCatalogSchema),
+  workoutController.createExerciseFromCatalog,
 );
 router.put(
   '/exercises/:exerciseId',

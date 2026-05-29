@@ -11,6 +11,7 @@ const chatRoutes = require('./modules/chat/routes/chat.routes');
 const paymentRoutes = require('./modules/payment/routes/payment.routes');
 const notificationRoutes = require('./modules/notification/routes/notification.routes');
 const locationRoutes = require('./modules/location/routes/location.routes');
+const songRoutes = require('./modules/song/routes/song.routes');
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/locations', locationRoutes);
+app.use('/api/songs', songRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -10,5 +10,9 @@ const trainerRegisterSchema = Joi.object({
   birthDate: Joi.date().iso().required(),
 });
 
-module.exports = { trainerRegisterSchema };
+const trainerLoginSchema = Joi.object({
+  email: Joi.string().trim().email().required(),
+  password: Joi.string().min(8).max(128).required(),
+});
 
+module.exports = { trainerRegisterSchema, trainerLoginSchema };

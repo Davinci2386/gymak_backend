@@ -61,5 +61,21 @@ async function register(req, res, next) {
   }
 }
 
-module.exports = { register };
+async function login(req, res, next) {
+  try {
+    const { user, accessToken, refreshToken } = await trainerAuthService.loginTrainer(req.body);
 
+    return ApiResponse.success(res, {
+      message: 'Trainer logged in successfully',
+      data: {
+        trainer: sanitizeTrainer(user),
+        accessToken,
+        refreshToken,
+      },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+module.exports = { register, login };
