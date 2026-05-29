@@ -2,6 +2,10 @@ const { ApiResponse } = require('../../../utils');
 const authService = require('../service/auth.service');
 
 function sanitizeUser(user) {
+  const profileImageUrls = Array.isArray(user.profileImages)
+    ? user.profileImages.map((image) => image.url).filter(Boolean)
+    : [];
+
   return {
     id: user.id,
     firstName: user.firstName,
@@ -10,6 +14,13 @@ function sanitizeUser(user) {
     role: user.role,
     gender: user.gender,
     birthDate: user.birthDate,
+    goals: user.goals ?? [],
+    hasRoutine: user.hasRoutine ?? false,
+    trainTime: user.trainTime ?? null,
+    medical_condition: user.medicalCondition ?? null,
+    injuries: user.injuries ?? null,
+    medications: user.medications ?? null,
+    profileImageUrls,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };

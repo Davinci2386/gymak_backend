@@ -60,20 +60,64 @@ model User {
   role         Role      @default(USER)
   gender       Gender?
   birthDate    DateTime?
+  goals        String[]  @default([])
+  hasRoutine   Boolean   @default(false)
+  trainTime    String?
+  medicalCondition String?
+  injuries         String?
+  medications      String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   sessions                UserSession[]
-  sentTrainerRequests     TrainerRequest[]    @relation("sentTrainerRequests")
-  receivedTrainerRequests TrainerRequest[]    @relation("receivedTrainerRequests")
-  playerAssignments       TrainerAssignment[] @relation("playerAssignments")
-  trainerAssignments      TrainerAssignment[] @relation("trainerAssignments")
+  sentTrainerRequests     TrainerRequest[]         @relation("sentTrainerRequests")
+  receivedTrainerRequests TrainerRequest[]         @relation("receivedTrainerRequests")
+  playerAssignments       TrainerAssignment[]      @relation("playerAssignments")
+  trainerAssignments      TrainerAssignment[]      @relation("trainerAssignments")
   trainerProfile          TrainerProfile?
   subscriptions           Subscription[]
   payments                Payment[]
+  workoutPlansAsPlayer    WorkoutPlan[]            @relation("playerWorkoutPlans")
+  workoutPlansAsTrainer   WorkoutPlan[]            @relation("trainerWorkoutPlans")
+  nutritionMealsAsPlayer  NutritionMeal[]          @relation("playerNutritionMeals")
+  nutritionMealsAsTrainer NutritionMeal[]          @relation("trainerNutritionMeals")
+  songsCreated            Song[]                   @relation("adminCreatedSongs")
+  workoutCatalogExercises WorkoutCatalogExercise[]
+  profileImages           UserProfileImage[]
 
   @@index([email])
+}
+
+model UserProfileImage {
+  id        String   @id @default(uuid())
+  userId    String
+  url       String
+  fileId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Song {
+  id               String   @id @default(uuid())
+  title            String
+  artist           String
+  coverImageUrl    String
+  mp3Url           String
+  durationSeconds  Int
+  createdByAdminId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  createdByAdmin User? @relation("adminCreatedSongs", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([title])
+  @@index([artist])
+  @@index([createdAt])
+  @@index([createdByAdminId])
 }
 
 model TrainerProfile {
@@ -130,9 +174,9 @@ model TrainerRequest {
   player  User @relation("sentTrainerRequests", fields: [playerId], references: [id], onDelete: Cascade)
   trainer User @relation("receivedTrainerRequests", fields: [trainerId], references: [id], onDelete: Cascade)
 
-  @@unique([playerId, trainerId, status])
   @@index([playerId])
   @@index([trainerId])
+  @@index([playerId, trainerId, status])
 }
 
 model TrainerAssignment {
@@ -155,12 +199,20 @@ model TrainerAssignment {
 }
 
 model WorkoutPlan {
-  id        String      @id @default(uuid())
-  slug      String      @unique
+  id        String       @id @default(uuid())
+  slug      String       @unique
   title     String?
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  playerId  String?
+  trainerId String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
   days      WorkoutDay[]
+  player    User?        @relation("playerWorkoutPlans", fields: [playerId], references: [id], onDelete: Cascade)
+  trainer   User?        @relation("trainerWorkoutPlans", fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, trainerId])
+  @@index([playerId])
+  @@index([trainerId])
 }
 
 model WorkoutDay {
@@ -178,18 +230,20 @@ model WorkoutDay {
 }
 
 model WorkoutExercise {
-  id          String    @id @default(uuid())
+  id          String      @id @default(uuid())
   dayId       String
   name        String
-  description String    @default("")
-  imageUrls   String[]  @default([])
+  description String      @default("")
+  imageUrls   String[]    @default([])
   videoUrl    String?
-  sortOrder   Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  day         WorkoutDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  muscleGroup MuscleGroup @default(CARDIO)
+  sortOrder   Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  day         WorkoutDay  @relation(fields: [dayId], references: [id], onDelete: Cascade)
 
   @@index([dayId])
+  @@index([muscleGroup])
 }
 
 enum MealSection {
@@ -198,8 +252,38 @@ enum MealSection {
   DINNER
 }
 
+enum MuscleGroup {
+  BICEPS
+  TRICEPS
+  CHEST
+  LEGS
+  BACK
+  SHOULDERS
+  CARDIO
+}
+
+model WorkoutCatalogExercise {
+  id          String      @id @default(uuid())
+  name        String
+  description String      @default("")
+  imageUrls   String[]    @default([])
+  videoUrl    String?
+  muscleGroup MuscleGroup
+  createdById String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([muscleGroup])
+  @@index([name])
+  @@index([createdById])
+}
+
 model NutritionMeal {
   id          String                @id @default(uuid())
+  playerId    String?
+  trainerId   String?
   section     MealSection
   name        String
   imageUrl    String
@@ -207,8 +291,12 @@ model NutritionMeal {
   createdAt   DateTime              @default(now())
   updatedAt   DateTime              @updatedAt
   ingredients NutritionIngredient[]
+  player      User?                 @relation("playerNutritionMeals", fields: [playerId], references: [id], onDelete: Cascade)
+  trainer     User?                 @relation("trainerNutritionMeals", fields: [trainerId], references: [id], onDelete: Cascade)
 
   @@index([section])
+  @@index([playerId])
+  @@index([trainerId])
 }
 
 model NutritionIngredient {
@@ -224,13 +312,13 @@ model NutritionIngredient {
 }
 
 model SubscriptionPlan {
-  id          String @id @default(uuid())
-  name        String @unique
-  description String?
-  price       Int    // بـ cents (الحد الأدنى للـ Stripe)
-  durationDays Int    // مدة الاشتراك بـ أيام
-  features    String[] @default([])
-  isActive    Boolean @default(true)
+  id           String   @id @default(uuid())
+  name         String   @unique
+  description  String?
+  price        Int // بـ cents (الحد الأدنى للـ Stripe)
+  durationDays Int // مدة الاشتراك بـ أيام
+  features     String[] @default([])
+  isActive     Boolean  @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -242,20 +330,20 @@ model SubscriptionPlan {
 }
 
 model Subscription {
-  id              String               @id @default(uuid())
-  userId          String
-  planId          String
-  status          SubscriptionStatus   @default(ACTIVE)
+  id               String             @id @default(uuid())
+  userId           String
+  planId           String
+  status           SubscriptionStatus @default(ACTIVE)
   stripeCustomerId String?
-  startDate       DateTime             @default(now())
-  endDate         DateTime
-  cancelledAt     DateTime?
+  startDate        DateTime           @default(now())
+  endDate          DateTime
+  cancelledAt      DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan  SubscriptionPlan   @relation(fields: [planId], references: [id])
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan     SubscriptionPlan @relation(fields: [planId], references: [id])
   payments Payment[]
 
   @@unique([userId, planId, status])
@@ -266,22 +354,22 @@ model Subscription {
 }
 
 model Payment {
-  id                String        @id @default(uuid())
-  userId            String
-  subscriptionId    String?
-  planId            String
-  status            PaymentStatus @default(PENDING)
-  amount            Int           // بـ cents
-  stripePaymentIntentId String?  @unique
-  stripeChargeId    String?       @unique
-  currency          String        @default("USD")
-  errorMessage      String?
+  id                    String        @id @default(uuid())
+  userId                String
+  subscriptionId        String?
+  planId                String
+  status                PaymentStatus @default(PENDING)
+  amount                Int // بـ cents
+  stripePaymentIntentId String?       @unique
+  stripeChargeId        String?       @unique
+  currency              String        @default("USD")
+  errorMessage          String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription?    @relation(fields: [subscriptionId], references: [id])
   plan         SubscriptionPlan @relation(fields: [planId], references: [id])
 
   @@index([userId])

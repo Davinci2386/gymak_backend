@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
 const { env, prisma } = require('../../../config');
-const { AppError } = require('../../../shared/errors');
+const { AppError, UnauthorizedError } = require('../../../shared/errors');
 
 function signAccessToken({ userId, role }) {
   if (!env.JWT_SECRET) {
@@ -89,5 +89,25 @@ async function registerTrainer({ firstName, lastName, email, password, gender, d
   return { user, accessToken, refreshToken };
 }
 
-module.exports = { registerTrainer };
+async function loginTrainer({ email, password }) {
+  const user = await prisma.user.findUnique({
+    where: { email: email.toLowerCase() },
+    include: {
+      trainerProfile: { include: { certificates: true } },
+    },
+  });
 
+  if (!user || user.role !== 'TRAINER') {
+    throw new UnauthorizedError('Invalid email or password');
+  }
+
+  const ok = await bcrypt.compare(password, user.passwordHash);
+  if (!ok) {
+    throw new UnauthorizedError('Invalid email or password');
+  }
+
+  const { accessToken, refreshToken } = await issueTokens(user);
+  return { user, accessToken, refreshToken };
+}
+
+module.exports = { registerTrainer, loginTrainer };

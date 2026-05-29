@@ -65,6 +65,12 @@ async function register(payload) {
     passwordHash,
     gender: payload.gender,
     birthDate: new Date(payload.birthDate),
+    goals: payload.goals ?? [],
+    hasRoutine: payload.hasRoutine ?? false,
+    trainTime: payload.trainTime ?? null,
+    medicalCondition: payload.medical_condition ?? null,
+    injuries: payload.injuries ?? null,
+    medications: payload.medications ?? null,
     role: 'USER',
   });
 
