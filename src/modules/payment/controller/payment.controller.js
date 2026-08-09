@@ -94,8 +94,16 @@ const handleStripeWebhook = async (req, res) => {
  */
 const handlePaymentIntentSucceeded = async (paymentIntent) => {
   try {
-    const { id: paymentIntentId, charges, amount_received, metadata } = paymentIntent;
-    const chargeId = charges?.data[0]?.id;
+    const {
+      id: paymentIntentId,
+      charges,
+      latest_charge: latestCharge,
+      amount_received,
+    } = paymentIntent;
+    const chargeId =
+      typeof latestCharge === 'string'
+        ? latestCharge
+        : latestCharge?.id || charges?.data?.[0]?.id;
 
     if (!chargeId) {
       console.warn('No charge found in payment intent:', paymentIntentId);

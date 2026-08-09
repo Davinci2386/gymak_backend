@@ -44,6 +44,8 @@ async function updateMe(req, res, next) {
     if (req.body.goals !== undefined) data.goals = req.body.goals;
     if (req.body.hasRoutine !== undefined) data.hasRoutine = req.body.hasRoutine;
     if (req.body.trainTime !== undefined) data.trainTime = req.body.trainTime;
+    if (req.body.heightCm !== undefined) data.heightCm = req.body.heightCm;
+    if (req.body.weightKg !== undefined) data.weightKg = req.body.weightKg;
     if (req.body.medical_condition !== undefined) data.medicalCondition = req.body.medical_condition;
     if (req.body.injuries !== undefined) data.injuries = req.body.injuries;
     if (req.body.medications !== undefined) data.medications = req.body.medications;
@@ -77,7 +79,9 @@ async function deleteMe(req, res, next) {
       throw new AppError('Not authenticated', 401);
     }
 
-    const deletedAccount = await userRepo.deleteAccountDataKeepFinancial(userId);
+    const deletedAccount = await userRepo.deleteAccountDataKeepFinancialWithOptions(userId, {
+      deletionReason: 'Deleted by account owner',
+    });
     if (!deletedAccount) {
       throw new AppError('User not found', 404);
     }

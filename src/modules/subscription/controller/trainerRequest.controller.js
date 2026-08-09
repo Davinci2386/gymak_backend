@@ -86,6 +86,30 @@ async function myAssignment(req, res, next) {
   }
 }
 
+async function myTrainerStatus(req, res, next) {
+  try {
+    const trainerStatus = await trainerRequestService.getMyTrainerStatus(req.user.id);
+    return ApiResponse.success(res, {
+      message: 'Trainer status fetched successfully',
+      data: { trainerStatus },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function trainerPlayers(req, res, next) {
+  try {
+    const players = await trainerRequestService.listTrainerPlayers(req.user.id);
+    return ApiResponse.success(res, {
+      message: 'Trainer players fetched successfully',
+      data: { players },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   create,
   myRequests,
@@ -94,5 +118,6 @@ module.exports = {
   reject,
   cancel,
   myAssignment,
+  myTrainerStatus,
+  trainerPlayers,
 };
-

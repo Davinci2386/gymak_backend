@@ -10,7 +10,8 @@ const router = Router();
 // Public list of trainers (player can choose one)
 router.get('/', trainerController.list);
 
-// Trainer registration (multipart/form-data, optional certificates[])
+// Trainer registration (application/json with optional string certificates[]).
+// Multipart file uploads remain temporarily supported for older clients.
 router.post(
   '/auth/register',
   upload.array('certificates', 10),

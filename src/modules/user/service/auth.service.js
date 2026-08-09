@@ -7,6 +7,12 @@ const { AppError, UnauthorizedError } = require('../../../shared/errors');
 const userRepo = require('../repository/user.repository');
 const sessionRepo = require('../repository/session.repository');
 
+function ensureActiveAccount(user) {
+  if (!user || user.accountStatus !== 'ACTIVE') {
+    throw new UnauthorizedError('This account is no longer active');
+  }
+}
+
 function signAccessToken({ userId, role }) {
   if (!env.JWT_SECRET) {
     throw new AppError('JWT is not configured (missing JWT_SECRET)', 500);
@@ -68,6 +74,8 @@ async function register(payload) {
     goals: payload.goals ?? [],
     hasRoutine: payload.hasRoutine ?? false,
     trainTime: payload.trainTime ?? null,
+    heightCm: payload.heightCm ?? 0,
+    weightKg: payload.weightKg ?? 0,
     medicalCondition: payload.medical_condition ?? null,
     injuries: payload.injuries ?? null,
     medications: payload.medications ?? null,
@@ -84,6 +92,7 @@ async function login({ email, password }) {
   if (!user) {
     throw new UnauthorizedError('Invalid email or password');
   }
+  ensureActiveAccount(user);
 
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) {
@@ -105,6 +114,7 @@ async function refresh({ refreshToken }) {
   if (!user) {
     throw new UnauthorizedError('Invalid session');
   }
+  ensureActiveAccount(user);
 
   await sessionRepo.revokeSessionByHash(refreshTokenHash);
   const { accessToken, refreshToken: newRefreshToken } = await issueTokens(user);

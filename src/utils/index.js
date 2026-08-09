@@ -2,6 +2,7 @@ const ApiResponse = require('./apiResponse');
 const APIError = require('./apiError');
 const logger = require('./logger');
 const { paginate, buildPaginationMeta } = require('./pagination');
+const { formatFriendlyDate } = require('./dateFormat');
 
 module.exports = {
   ApiResponse,
@@ -10,4 +11,5 @@ module.exports = {
   logger,
   paginate,
   buildPaginationMeta,
+  formatFriendlyDate,
 };

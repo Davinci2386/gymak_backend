@@ -2,6 +2,7 @@ const Joi = require('joi');
 
 const trainTimeSchema = Joi.string().trim().pattern(/^(0?[1-9]|1[0-2]):([0-5]\d)\s?(AM|PM)$/i);
 const nullableProfileTextSchema = Joi.string().trim().max(2000).allow(null);
+const nonNegativeNumberSchema = Joi.number().min(0);
 
 const registerSchema = Joi.object({
   firstName: Joi.string().trim().min(2).max(50).required(),
@@ -13,6 +14,8 @@ const registerSchema = Joi.object({
   goals: Joi.array().items(Joi.string().trim().min(1)).default([]),
   hasRoutine: Joi.boolean().default(false),
   trainTime: trainTimeSchema.allow(null),
+  heightCm: nonNegativeNumberSchema.default(0),
+  weightKg: nonNegativeNumberSchema.default(0),
   medical_condition: nullableProfileTextSchema,
   injuries: nullableProfileTextSchema,
   medications: nullableProfileTextSchema,
@@ -36,6 +39,8 @@ const updateMeSchema = Joi.object({
   goals: Joi.array().items(Joi.string().trim().min(1)),
   hasRoutine: Joi.boolean(),
   trainTime: trainTimeSchema.allow(null),
+  heightCm: nonNegativeNumberSchema,
+  weightKg: nonNegativeNumberSchema,
   medical_condition: nullableProfileTextSchema,
   injuries: nullableProfileTextSchema,
   medications: nullableProfileTextSchema,

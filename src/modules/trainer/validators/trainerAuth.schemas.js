@@ -8,6 +8,12 @@ const trainerRegisterSchema = Joi.object({
   gender: Joi.string().valid('MALE', 'FEMALE').required(),
   description: Joi.string().trim().max(2000).allow('', null),
   birthDate: Joi.date().iso().required(),
+  certificates: Joi.array()
+    .items(Joi.string().trim().min(1).max(200))
+    .single()
+    .max(20)
+    .unique()
+    .default([]),
 });
 
 const trainerLoginSchema = Joi.object({

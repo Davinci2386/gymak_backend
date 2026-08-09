@@ -40,9 +40,11 @@ router.post(
 router.get('/trainer-requests/me', auth, authorize('USER'), trainerRequestController.myRequests);
 router.post('/trainer-requests/:requestId/cancel', auth, authorize('USER'), trainerRequestController.cancel);
 router.get('/trainer-requests/inbox', auth, authorize('TRAINER'), trainerRequestController.inbox);
+router.get('/trainer/players', auth, authorize('TRAINER'), trainerRequestController.trainerPlayers);
 router.post('/trainer-requests/:requestId/approve', auth, authorize('TRAINER'), trainerRequestController.approve);
 router.post('/trainer-requests/:requestId/reject', auth, authorize('TRAINER'), trainerRequestController.reject);
 router.get('/assignment/me', auth, authorize('USER'), trainerRequestController.myAssignment);
+router.get('/trainer-status/me', auth, authorize('USER'), trainerRequestController.myTrainerStatus);
 
 // === Admin Endpoints ===
 // Create new subscription plan

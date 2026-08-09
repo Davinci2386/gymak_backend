@@ -28,10 +28,39 @@ function findActiveAssignmentBetween({ playerId, trainerId }) {
   });
 }
 
+function listActiveAssignmentsForTrainer(trainerId) {
+  return prisma.trainerAssignment.findMany({
+    where: { trainerId, status: 'ACTIVE' },
+    include: {
+      player: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          role: true,
+          gender: true,
+          birthDate: true,
+          goals: true,
+          hasRoutine: true,
+          trainTime: true,
+          heightCm: true,
+          weightKg: true,
+          medicalCondition: true,
+          injuries: true,
+          medications: true,
+          createdAt: true,
+        },
+      },
+    },
+    orderBy: { startedAt: 'desc' },
+  });
+}
+
 module.exports = {
   endActiveAssignmentForPlayer,
   createAssignment,
   findActiveAssignmentForPlayer,
   findActiveAssignmentBetween,
+  listActiveAssignmentsForTrainer,
 };
-

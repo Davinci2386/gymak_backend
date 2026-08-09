@@ -104,14 +104,14 @@ async function seedWorkoutDefaultPlan() {
 }
 
 async function seedNutritionMeals() {
-  const mealCount = await prisma.nutritionMeal.count();
+  const mealCount = await prisma.nutritionCatalogMeal.count();
   if (mealCount > 0) {
-    console.log('Nutrition meals already present; skip nutrition seed.');
+    console.log('Nutrition catalog meals already present; skip nutrition seed.');
     return;
   }
 
   for (const m of nutritionSeedData) {
-    await prisma.nutritionMeal.create({
+    await prisma.nutritionCatalogMeal.create({
       data: {
         section: m.section,
         name: m.name,
@@ -127,7 +127,7 @@ async function seedNutritionMeals() {
         },
       },
     });
-    console.log(`Seeded nutrition meal: ${m.name} (${m.section})`);
+    console.log(`Seeded nutrition catalog meal: ${m.name} (${m.section})`);
   }
 }
 

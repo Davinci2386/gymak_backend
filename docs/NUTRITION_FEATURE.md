@@ -1,32 +1,60 @@
-# Nutrition feature — summary
+# Nutrition feature
 
-This document describes the nutrition module added to the workout backend: data model, public catalog API, trainer (coach) write API, seed data, and where the code lives.
+This module now follows the same separation used in workouts:
 
----
+- `NutritionCatalogMeal` is the reusable meal catalog shared across trainers.
+- `NutritionMeal` is the meal assigned inside a specific player plan, scoped by `playerId` and `trainerId`.
 
-## Domain model (Prisma)
+## Domain model
 
-- **`MealSection` enum:** `BREAKFAST`, `LUNCH`, `DINNER` — the three meal sections (breakfast, lunch, dinner).
-- **`NutritionMeal`:** belongs to one section; stores `name`, `imageUrl` (single image per meal), total `calories`, and related ingredients.
-- **`NutritionIngredient`:** belongs to a meal; stores `name`, `quantity` (free-text, e.g. `200g`, `1 tbsp`), per-ingredient `calories`, and `sortOrder` for stable ordering.
+- `NutritionCatalogMeal`
+  - General meal template.
+  - Stores `section`, `name`, `imageUrl`, `calories`, optional `createdById`.
+  - Has many `NutritionCatalogIngredient`.
+- `NutritionMeal`
+  - Player-specific assigned meal.
+  - Stores the same meal data plus `playerId` and `trainerId`.
+  - Has many `NutritionIngredient`.
 
-Deleting a meal cascades to its ingredients. Migration: `prisma/migrations/20260416120000_nutrition_meals/migration.sql`.
-
----
+This keeps the catalog reusable while allowing coaches to build private player plans.
 
 ## API (`/api/nutrition`)
 
-| Method | Path | Auth | Purpose |
-|--------|------|------|---------|
-| **GET** | `/api/nutrition/meals` | Public | Full catalog: response groups meals under `sections.breakfast`, `sections.lunch`, `sections.dinner`. Optional query: `?section=breakfast` \| `lunch` \| `dinner` returns `{ meals: [...] }` for that section only. |
-| **GET** | `/api/nutrition/meals/:mealId` | Public | Single meal with ingredients. |
-| **POST** | `/api/nutrition/meals` | `TRAINER` + Bearer | Create a meal in a chosen section; body includes ingredients array. |
-| **PUT** | `/api/nutrition/meals/:mealId` | `TRAINER` + Bearer | Partial update; if `ingredients` is sent, ingredients are replaced (delete + recreate). |
-| **DELETE** | `/api/nutrition/meals/:mealId` | `TRAINER` + Bearer | Remove a meal and its ingredients. |
+### Player endpoints
 
-JSON responses follow the existing `ApiResponse` shape (`success`, `statusCode`, `message`, `data`). Public meal payloads expose `section` as lowercase keys: `breakfast`, `lunch`, `dinner` (mapped from Prisma enums for readability).
+These require `USER` auth and an active trainer assignment.
 
-**Create meal body (example):**
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/nutrition/meals` | Get the assigned nutrition plan for the current player. |
+| `GET` | `/api/nutrition/meals/:mealId` | Get one assigned meal from the current player plan. |
+
+Optional filter:
+
+```http
+GET /api/nutrition/meals?section=breakfast
+```
+
+### Trainer endpoints
+
+These require `TRAINER` auth.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/nutrition/catalog/meals` | List reusable catalog meals. |
+| `GET` | `/api/nutrition/players/:playerId/meals` | View one player's assigned meals. |
+| `POST` | `/api/nutrition/players/:playerId/meals` | Create a new custom meal for a player and also add it to the catalog. |
+| `POST` | `/api/nutrition/players/:playerId/meals/from-catalog` | Copy an existing catalog meal into the player's plan. |
+| `PUT` | `/api/nutrition/meals/:mealId` | Update a player-assigned meal only. |
+| `DELETE` | `/api/nutrition/meals/:mealId` | Delete a player-assigned meal only. |
+
+Catalog filtering:
+
+```http
+GET /api/nutrition/catalog/meals?section=lunch
+```
+
+Create custom meal body:
 
 ```json
 {
@@ -41,7 +69,41 @@ JSON responses follow the existing `ApiResponse` shape (`success`, `statusCode`,
 }
 ```
 
----
+Add from catalog body:
+
+```json
+{
+  "sourceCatalogMealId": "uuid"
+}
+```
+
+Backward-compatible alias:
+
+```json
+{
+  "sourceMealId": "uuid"
+}
+```
+
+## Behavior
+
+- Player meal reads return only meals assigned to that player by the currently active trainer.
+- Creating a custom meal for a player also inserts a reusable copy into `NutritionCatalogMeal`.
+- Copying from catalog creates a new `NutritionMeal` row for that player; it does not reuse the catalog row directly.
+- Updating or deleting an assigned meal does not mutate the catalog copy, matching the workout behavior.
+
+## Seed data
+
+- `prisma/nutritionSeedData.js` contains the starter meal catalog.
+- `prisma/seed.js` now seeds `NutritionCatalogMeal`, not player-assigned meals.
+
+## Important migration note
+
+The migration `prisma/migrations/20260604000000_nutrition_catalog_alignment/migration.sql`:
+
+- creates the new nutrition catalog tables
+- moves old global meals (`playerId IS NULL` and `trainerId IS NULL`) from `NutritionMeal` into the catalog
+- deletes those old global rows from `NutritionMeal`
 
 ## Code layout
 
@@ -49,30 +111,7 @@ JSON responses follow the existing `ApiResponse` shape (`success`, `statusCode`,
 |------|------|
 | Routes | `src/modules/nutrition/routes/nutrition.routes.js` |
 | Controller | `src/modules/nutrition/controller/nutrition.controller.js` |
-| Service (mapping + rules) | `src/modules/nutrition/service/nutrition.service.js` |
-| Repository (Prisma) | `src/modules/nutrition/repository/nutrition.repository.js` |
-| Joi validators | `src/modules/nutrition/validators/nutrition.schemas.js` |
-| Section query / API key mapping | `src/modules/nutrition/constants/sections.js` |
-| Router mount | `src/app.js` — `app.use('/api/nutrition', nutritionRoutes)` |
-
----
-
-## Seed data
-
-- **`prisma/nutritionSeedData.js`** — six sample meals (two per section) with realistic-style ingredients and Unsplash image URLs.
-- **`prisma/seed.js`** — runs workout seed first, then nutrition seed. Nutrition insert is skipped if any `NutritionMeal` row already exists.
-
-After migrations, run:
-
-```bash
-npx prisma generate
-npx prisma migrate deploy
-npx prisma db seed
-```
-
----
-
-## Notes
-
-- “Coach” in product terms maps to the existing **`TRAINER`** role and JWT (`authorize('TRAINER')`).
-- Meal `calories` is stored explicitly (not auto-summed from ingredients) so totals can match labels or rounding used by coaches.
+| Service | `src/modules/nutrition/service/nutrition.service.js` |
+| Repository | `src/modules/nutrition/repository/nutrition.repository.js` |
+| Validators | `src/modules/nutrition/validators/nutrition.schemas.js` |
+| Section mapping | `src/modules/nutrition/constants/sections.js` |

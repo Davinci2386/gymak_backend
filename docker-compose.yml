@@ -4,15 +4,22 @@ services:
     container_name: workout_app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:${PORT:-3000}"
     environment:
-      NODE_ENV: development
-      STRIPE_SECRET_KEY: sk_test_
-      STRIPE_PUBLISHABLE_KEY: pk_test_
-      PORT: 3000
-      DATABASE_URL: postgresql://workout_user:workout_pass@postgres:5432/workout_db
+      NODE_ENV: ${NODE_ENV}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      IMAGEKIT_PUBLIC_KEY: ${IMAGEKIT_PUBLIC_KEY}
+      IMAGEKIT_PRIVATE_KEY: ${IMAGEKIT_PRIVATE_KEY}
+      IMAGEKIT_URL_ENDPOINT: ${IMAGEKIT_URL_ENDPOINT}
+      PORT: ${PORT}
+      DATABASE_URL: ${DOCKER_DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: 1h
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -22,15 +29,15 @@ services:
     container_name: workout_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: workout_db
-      POSTGRES_USER: workout_user
-      POSTGRES_PASSWORD: workout_pass
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U workout_user -d workout_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5

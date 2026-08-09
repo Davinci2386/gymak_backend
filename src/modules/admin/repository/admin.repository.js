@@ -16,6 +16,7 @@ class AdminRepository {
         lastName: true,
         passwordHash: true,
         role: true,
+        accountStatus: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -34,6 +35,7 @@ class AdminRepository {
         firstName: true,
         lastName: true,
         role: true,
+        accountStatus: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -58,6 +60,7 @@ class AdminRepository {
         firstName: true,
         lastName: true,
         role: true,
+        accountStatus: true,
         createdAt: true,
       },
     });
@@ -117,6 +120,7 @@ class AdminRepository {
         lastName: true,
         passwordHash: true,
         role: true,
+        accountStatus: true,
         createdAt: true,
       },
     });

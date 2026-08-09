@@ -22,6 +22,16 @@ function listPlayerRequests(playerId) {
   });
 }
 
+function findLatestPlayerRequest(playerId) {
+  return prisma.trainerRequest.findFirst({
+    where: { playerId },
+    orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+    include: {
+      trainer: { select: { id: true, firstName: true, lastName: true, email: true, role: true } },
+    },
+  });
+}
+
 function listTrainerInbox(trainerId) {
   return prisma.trainerRequest.findMany({
     where: { trainerId, status: 'PENDING' },
@@ -47,8 +57,8 @@ module.exports = {
   createRequest,
   findPendingByPlayerAndTrainer,
   listPlayerRequests,
+  findLatestPlayerRequest,
   listTrainerInbox,
   findById,
   updateStatus,
 };
-

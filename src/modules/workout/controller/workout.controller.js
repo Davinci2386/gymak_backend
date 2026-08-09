@@ -51,6 +51,23 @@ async function listCatalogExercises(req, res, next) {
   }
 }
 
+async function createCatalogExercise(req, res, next) {
+  try {
+    const body = { ...req.body, videoUrl: normalizeVideoUrl(req.body.videoUrl) };
+    const exercise = await workoutService.createCatalogExercise({
+      trainerId: req.user.id,
+      imageFiles: req.files || [],
+      ...body,
+    });
+    return ApiResponse.created(res, {
+      message: 'Catalog exercise created',
+      data: { exercise },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function createDay(req, res, next) {
   try {
     const day = await workoutService.createDay({
@@ -104,6 +121,7 @@ async function createExercise(req, res, next) {
     const exercise = await workoutService.createExercise({
       trainerId: req.user.id,
       dayId: req.params.dayId,
+      imageFiles: req.files || [],
       ...body,
     });
     return ApiResponse.created(res, {
@@ -170,6 +188,7 @@ module.exports = {
   getWorkoutPlan,
   getTrainerPlayerPlan,
   listCatalogExercises,
+  createCatalogExercise,
   createDay,
   updateDay,
   deleteDay,

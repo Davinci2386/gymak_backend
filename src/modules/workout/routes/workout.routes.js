@@ -1,9 +1,11 @@
 const { Router } = require('express');
 const { auth, authorize, requireActiveAssignment, validate } = require('../../../middleware');
 const workoutController = require('../controller/workout.controller');
+const uploadExerciseImages = require('../middleware/uploadExerciseImages');
 const {
   createDaySchema,
   updateDaySchema,
+  createCatalogExerciseSchema,
   createExerciseSchema,
   updateExerciseSchema,
   addExerciseFromCatalogSchema,
@@ -16,6 +18,13 @@ router.get('/plan', auth, authorize('USER'), requireActiveAssignment, workoutCon
 const trainer = [auth, authorize('TRAINER')];
 
 router.get('/catalog/exercises', trainer, workoutController.listCatalogExercises);
+router.post(
+  '/catalog/exercises',
+  trainer,
+  uploadExerciseImages.array('images', 10),
+  validate(createCatalogExerciseSchema),
+  workoutController.createCatalogExercise,
+);
 
 router.get('/players/:playerId/plan', trainer, workoutController.getTrainerPlayerPlan);
 router.post('/players/:playerId/days', trainer, validate(createDaySchema), workoutController.createDay);
@@ -25,6 +34,7 @@ router.delete('/days/:dayId', trainer, workoutController.deleteDay);
 router.post(
   '/days/:dayId/exercises',
   trainer,
+  uploadExerciseImages.array('images', 10),
   validate(createExerciseSchema),
   workoutController.createExercise,
 );

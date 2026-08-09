@@ -70,6 +70,78 @@ async function myAssignment(playerId) {
   return assignmentRepo.findActiveAssignmentForPlayer(playerId);
 }
 
+async function getMyTrainerStatus(playerId) {
+  const activeAssignment = await assignmentRepo.findActiveAssignmentForPlayer(playerId);
+  if (activeAssignment) {
+    return {
+      status: 'APPROVED',
+      hasTrainer: true,
+      isWaitingApproval: false,
+      trainer: activeAssignment.trainer,
+      assignment: activeAssignment,
+      latestRequest: null,
+    };
+  }
+
+  const latestRequest = await trainerRequestRepo.findLatestPlayerRequest(playerId);
+  if (!latestRequest) {
+    return {
+      status: 'NONE',
+      hasTrainer: false,
+      isWaitingApproval: false,
+      trainer: null,
+      assignment: null,
+      latestRequest: null,
+    };
+  }
+
+  if (latestRequest.status === 'PENDING') {
+    return {
+      status: 'PENDING',
+      hasTrainer: false,
+      isWaitingApproval: true,
+      trainer: latestRequest.trainer,
+      assignment: null,
+      latestRequest,
+    };
+  }
+
+  if (latestRequest.status === 'REJECTED') {
+    return {
+      status: 'REJECTED',
+      hasTrainer: false,
+      isWaitingApproval: false,
+      trainer: latestRequest.trainer,
+      assignment: null,
+      latestRequest,
+    };
+  }
+
+  if (latestRequest.status === 'APPROVED') {
+    return {
+      status: 'APPROVED',
+      hasTrainer: true,
+      isWaitingApproval: false,
+      trainer: latestRequest.trainer,
+      assignment: null,
+      latestRequest,
+    };
+  }
+
+  return {
+    status: 'NONE',
+    hasTrainer: false,
+    isWaitingApproval: false,
+    trainer: null,
+    assignment: null,
+    latestRequest,
+  };
+}
+
+async function listTrainerPlayers(trainerId) {
+  return assignmentRepo.listActiveAssignmentsForTrainer(trainerId);
+}
+
 module.exports = {
   requestTrainer,
   listMyRequests,
@@ -78,5 +150,6 @@ module.exports = {
   rejectRequest,
   cancelRequest,
   myAssignment,
+  getMyTrainerStatus,
+  listTrainerPlayers,
 };
-

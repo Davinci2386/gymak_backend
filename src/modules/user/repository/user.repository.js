@@ -76,12 +76,22 @@ function deleteProfileImagesByIds(ids) {
 }
 
 async function deleteAccountDataKeepFinancial(userId) {
+  return deleteAccountDataKeepFinancialWithOptions(userId, {});
+}
+
+async function deleteAccountDataKeepFinancialWithOptions(userId, options = {}) {
+  const {
+    deletedByAdminId = null,
+    deletionReason = 'Account deleted',
+  } = options;
   const now = Date.now();
   const anonymizedEmail = `deleted_${userId}_${now}@deleted.local`;
+  const deletedAt = new Date();
 
   return prisma.$transaction(async (tx) => {
     const user = await tx.user.findUnique({ where: { id: userId } });
     if (!user) return null;
+    if (user.accountStatus === 'DELETED') return user;
 
     await tx.userSession.deleteMany({ where: { userId } });
     await tx.trainerRequest.deleteMany({
@@ -105,7 +115,22 @@ async function deleteAccountDataKeepFinancial(userId) {
         OR: [{ playerId: userId }, { trainerId: userId }],
       },
     });
-    await tx.subscription.deleteMany({ where: { userId } });
+    await tx.userProfileImage.deleteMany({ where: { userId } }).catch((error) => {
+      if (isMissingUserProfileImageTableError(error)) {
+        return { count: 0 };
+      }
+      throw error;
+    });
+    await tx.subscription.updateMany({
+      where: {
+        userId,
+        status: 'ACTIVE',
+      },
+      data: {
+        status: 'CANCELLED',
+        cancelledAt: deletedAt,
+      },
+    });
 
     // Keep financial records by preserving the user row but removing identity/profile data.
     const updatedUser = await tx.user.update({
@@ -120,9 +145,15 @@ async function deleteAccountDataKeepFinancial(userId) {
         goals: [],
         hasRoutine: false,
         trainTime: null,
+        heightCm: 0,
+        weightKg: 0,
         medicalCondition: null,
         injuries: null,
         medications: null,
+        accountStatus: 'DELETED',
+        deletedAt,
+        deletedByAdminId,
+        deletionReason,
       },
     });
 
@@ -139,5 +170,6 @@ module.exports = {
   createProfileImages,
   deleteProfileImagesByIds,
   deleteAccountDataKeepFinancial,
+  deleteAccountDataKeepFinancialWithOptions,
 };
 

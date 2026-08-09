@@ -14,8 +14,8 @@ Workout and nutrition plan access is now tied to the trainer assigned to the pla
   - `You are not assigned to a trainer yet. Send a request to a coach to access this plan.`
 - Trainers can create and manage plans only for players actively assigned to them.
 - Rejected or cancelled trainer requests no longer block future requests to the same coach.
-- Trainers can reuse already-created workout days or exercises from the default plan or from their own assigned players' plans.
-- If a trainer does not find an exercise in the reusable list, they can still create a new exercise inside a player day.
+- Trainers can reuse already-created workout exercises and nutrition meals from dedicated catalogs.
+- If a trainer does not find an exercise or meal in the reusable list, they can still create a new one inside a player plan.
 
 ## Database changes
 
@@ -28,7 +28,8 @@ prisma/migrations/20260427000000_trainer_managed_plans/migration.sql
 Schema changes:
 
 - `WorkoutPlan` now has optional `playerId` and `trainerId`.
-- `NutritionMeal` now has optional `playerId` and `trainerId`.
+- `NutritionMeal` now represents player-assigned meals only.
+- `NutritionCatalogMeal` stores reusable meal templates for all trainers.
 - `User` now has relations for player/trainer workout plans and nutrition meals.
 - `TrainerRequest` no longer has a unique constraint on `(playerId, trainerId, status)`.
 - A normal index on `(playerId, trainerId, status)` remains for lookup performance.
@@ -56,11 +57,9 @@ GET /api/nutrition/meals?section=breakfast
 These require a trainer token. The trainer must be actively assigned to `:playerId`.
 
 ```http
-GET  /api/workouts/catalog/days
 GET  /api/workouts/catalog/exercises
 GET  /api/workouts/players/:playerId/plan
 POST /api/workouts/players/:playerId/days
-POST /api/workouts/players/:playerId/days/from-catalog
 PUT  /api/workouts/days/:dayId
 DELETE /api/workouts/days/:dayId
 POST /api/workouts/days/:dayId/exercises
@@ -69,31 +68,26 @@ PUT  /api/workouts/exercises/:exerciseId
 DELETE /api/workouts/exercises/:exerciseId
 
 GET  /api/nutrition/players/:playerId/meals
+GET  /api/nutrition/catalog/meals
 POST /api/nutrition/players/:playerId/meals
+POST /api/nutrition/players/:playerId/meals/from-catalog
 PUT  /api/nutrition/meals/:mealId
 DELETE /api/nutrition/meals/:mealId
 ```
 
 Workout flow:
 
-- Use `GET /api/workouts/catalog/days` to choose an already-created day.
-- Use `POST /api/workouts/players/:playerId/days/from-catalog` with `sourceDayId` to copy that day and its exercises into the player's plan.
 - Use `POST /api/workouts/players/:playerId/days` to create a new empty day if no existing day matches.
 - Use `GET /api/workouts/catalog/exercises` to choose an already-created exercise.
 - Use `POST /api/workouts/days/:dayId/exercises/from-catalog` with `sourceExerciseId` to copy that exercise into a player's existing day.
 - Use `POST /api/workouts/days/:dayId/exercises` to create a new exercise directly inside a player day.
 
-Add day from catalog body:
+Nutrition flow:
 
-```json
-{
-  "sourceDayId": "uuid",
-  "dayNumber": 1,
-  "label": "Upper body"
-}
-```
-
-`dayNumber` and `label` are optional. If omitted, the copied day keeps the source day values.
+- Use `GET /api/nutrition/catalog/meals` to choose an already-created meal.
+- Use `POST /api/nutrition/players/:playerId/meals/from-catalog` to copy that meal into the player's plan.
+- Use `POST /api/nutrition/players/:playerId/meals` to create a new meal directly inside a player plan.
+- Creating a new meal inside a player plan also inserts a reusable catalog copy.
 
 Add exercise from catalog body:
 
@@ -105,6 +99,16 @@ Add exercise from catalog body:
 ```
 
 `sortOrder` is optional. If omitted, the copied exercise keeps the source exercise order.
+
+Add meal from catalog body:
+
+```json
+{
+  "sourceCatalogMealId": "uuid"
+}
+```
+
+`sourceMealId` is also accepted for backward compatibility.
 
 ### Trainer request endpoints
 

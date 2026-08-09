@@ -5,6 +5,12 @@ const jwt = require('jsonwebtoken');
 const { env, prisma } = require('../../../config');
 const { AppError, UnauthorizedError } = require('../../../shared/errors');
 
+function ensureActiveAccount(user) {
+  if (!user || user.accountStatus !== 'ACTIVE') {
+    throw new UnauthorizedError('This account is no longer active');
+  }
+}
+
 function signAccessToken({ userId, role }) {
   if (!env.JWT_SECRET) {
     throw new AppError('JWT is not configured (missing JWT_SECRET)', 500);
@@ -68,20 +74,12 @@ async function registerTrainer({ firstName, lastName, email, password, gender, d
       trainerProfile: {
         create: {
           description: description || null,
-          certificates: certificates?.length
-            ? {
-              create: certificates.map((f) => ({
-                fileName: f.originalname,
-                mimeType: f.mimetype,
-                path: f.path.replace(/\\\\/g, '/'),
-              })),
-            }
-            : undefined,
+          certificates: certificates || [],
         },
       },
     },
     include: {
-      trainerProfile: { include: { certificates: true } },
+      trainerProfile: true,
     },
   });
 
@@ -93,13 +91,14 @@ async function loginTrainer({ email, password }) {
   const user = await prisma.user.findUnique({
     where: { email: email.toLowerCase() },
     include: {
-      trainerProfile: { include: { certificates: true } },
+      trainerProfile: true,
     },
   });
 
   if (!user || user.role !== 'TRAINER') {
     throw new UnauthorizedError('Invalid email or password');
   }
+  ensureActiveAccount(user);
 
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) {

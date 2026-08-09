@@ -1,4 +1,5 @@
 const { PrismaClient } = require('../../../generated/prisma');
+const { APIError } = require('../../../utils');
 const prisma = new PrismaClient();
 
 /**
@@ -37,12 +38,15 @@ const updateSubscriptionPlan = async (planId, updateData) => {
   const { name, description, price, durationDays, features, isActive } = updateData;
 
   // Check if plan exists
-  const plan = await prisma.subscriptionPlan.findUnique({
-    where: { id: planId },
+  const plan = await prisma.subscriptionPlan.findFirst({
+    where: {
+      id: planId,
+      isActive: true,
+    },
   });
 
   if (!plan) {
-    throw new Error('Subscription plan not found');
+    throw new APIError('Subscription plan not found', 404);
   }
 
   // If changing name, check for conflicts
@@ -94,12 +98,15 @@ const getActiveSubscriptionPlans = async () => {
  * Get subscription plan by ID
  */
 const getSubscriptionPlan = async (planId) => {
-  const plan = await prisma.subscriptionPlan.findUnique({
-    where: { id: planId },
+  const plan = await prisma.subscriptionPlan.findFirst({
+    where: {
+      id: planId,
+      isActive: true,
+    },
   });
 
   if (!plan) {
-    throw new Error('Subscription plan not found');
+    throw new APIError('Subscription plan not found', 404);
   }
 
   return plan;

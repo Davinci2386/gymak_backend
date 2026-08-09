@@ -114,6 +114,44 @@ function createExercise({ dayId, name, description, imageUrls, videoUrl, muscleG
   });
 }
 
+function createExerciseAndCatalog({
+  dayId,
+  name,
+  description,
+  imageUrls,
+  videoUrl,
+  muscleGroup,
+  sortOrder,
+  createdById,
+}) {
+  return prisma.$transaction(async (tx) => {
+    const exercise = await tx.workoutExercise.create({
+      data: {
+        dayId,
+        name,
+        description: description ?? '',
+        imageUrls: imageUrls ?? [],
+        videoUrl: videoUrl ?? null,
+        muscleGroup,
+        sortOrder: sortOrder ?? 0,
+      },
+    });
+
+    await tx.workoutCatalogExercise.create({
+      data: {
+        name,
+        description: description ?? '',
+        imageUrls: imageUrls ?? [],
+        videoUrl: videoUrl ?? null,
+        muscleGroup,
+        createdById: createdById ?? null,
+      },
+    });
+
+    return exercise;
+  });
+}
+
 function updateExercise(id, data) {
   return prisma.workoutExercise.update({ where: { id }, data });
 }
@@ -135,6 +173,7 @@ module.exports = {
   updateDay,
   deleteDay,
   createExercise,
+  createExerciseAndCatalog,
   updateExercise,
   deleteExercise,
 };

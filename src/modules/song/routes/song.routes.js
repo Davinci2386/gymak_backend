@@ -5,8 +5,8 @@ const { createSongSchema, updateSongSchema } = require('../validators/song.schem
 
 const router = Router();
 
-router.get('/', auth, authorize('USER'), songController.listSongs);
-router.get('/:songId', auth, authorize('USER'), songController.getSong);
+router.get('/', auth, authorize('USER', 'ADMIN'), songController.listSongs);
+router.get('/:songId', auth, authorize('USER', 'ADMIN'), songController.getSong);
 
 const admin = [auth, authorize('ADMIN')];
 

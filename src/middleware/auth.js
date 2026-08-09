@@ -1,8 +1,8 @@
 const { UnauthorizedError } = require('../shared/errors');
 const jwt = require('jsonwebtoken');
-const { env } = require('../config');
+const { env, prisma } = require('../config');
 
-function auth(req, _res, next) {
+async function auth(req, _res, next) {
   const header = req.headers.authorization;
   const token = header?.startsWith('Bearer ')
     ? header.slice('Bearer '.length)
@@ -18,9 +18,22 @@ function auth(req, _res, next) {
 
   try {
     const payload = jwt.verify(token, env.JWT_SECRET);
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: {
+        id: true,
+        role: true,
+        accountStatus: true,
+      },
+    });
+
+    if (!user || user.accountStatus !== 'ACTIVE') {
+      return next(new UnauthorizedError('This account is no longer active'));
+    }
+
     req.user = {
-      id: payload.sub,
-      role: payload.role,
+      id: user.id,
+      role: user.role,
     };
     return next();
   } catch (_err) {

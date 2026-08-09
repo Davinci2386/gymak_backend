@@ -176,8 +176,8 @@ Headers:
 
 بنقفل فقط APIs اللي لازمها “وجود مدرب وإسناد فعال”، مثل:
 
-- `GET /api/workouts/my-plan`
-- `GET /api/nutrition/my-plan`
+- `GET /api/workouts/plan`
+- `GET /api/nutrition/meals`
 
 تم تجهيز middleware جاهز:
 
@@ -192,7 +192,7 @@ Headers:
 عندما نبني workout/nutrition لاحقًا، نضيفه في routes:
 
 ```js
-router.get('/my-plan', auth, authorize('USER'), requireActiveAssignment, workoutController.myPlan);
+router.get('/plan', auth, authorize('USER'), requireActiveAssignment, workoutController.getWorkoutPlan);
 ```
 
 ---
@@ -246,4 +246,3 @@ npx prisma migrate dev --name trainer_assignment_requests
 - ربط الدفع: نجعل الإسناد/الوصول يتطلب `paymentStatus=PAID` أو `subscriptionStatus=ACTIVE`.
 - إضافة “طلب تغيير مدرب”: هو نفس flow الحالي تمامًا.
 - إضافة “إنهاء الإسناد” يدويًا: endpoint يضع `ENDED`.
-

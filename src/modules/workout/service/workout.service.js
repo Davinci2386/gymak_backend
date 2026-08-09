@@ -1,4 +1,5 @@
 const { AppError } = require('../../../shared/errors');
+const mediaUploadService = require('../../../shared/services/mediaUpload.service');
 const assignmentRepo = require('../../subscription/repository/assignment.repository');
 const workoutRepo = require('../repository/workout.repository');
 const MUSCLE_GROUPS = new Set(['BICEPS', 'TRICEPS', 'CHEST', 'LEGS', 'BACK', 'SHOULDERS', 'CARDIO']);
@@ -84,6 +85,19 @@ function mapCatalogExercise(exercise) {
   };
 }
 
+async function uploadExerciseImages({ trainerId, files }) {
+  const uploads = await mediaUploadService.uploadImages({
+    files,
+    folder: '/workouts/exercises',
+    tags: [`trainer:${trainerId}`],
+  });
+
+  return {
+    imageUrls: uploads.map((upload) => upload.url),
+    uploadedFileIds: uploads.map((upload) => upload.fileId),
+  };
+}
+
 async function getAssignedPlan({ playerId, trainerId }) {
   const plan = await workoutRepo.findPlanByPlayerAndTrainer({ playerId, trainerId });
   return mapPlan(plan) ?? {
@@ -107,6 +121,27 @@ async function listCatalogExercises({ muscleGroup }) {
   }
   const exercises = await workoutRepo.listCatalogExercises(muscleGroup);
   return exercises.map(mapCatalogExercise);
+}
+
+async function createCatalogExercise({ trainerId, name, description, imageFiles, videoUrl, muscleGroup }) {
+  let uploadedFileIds = [];
+  try {
+    const uploadResult = await uploadExerciseImages({ trainerId, files: imageFiles });
+    uploadedFileIds = uploadResult.uploadedFileIds;
+
+    const exercise = await workoutRepo.createCatalogExercise({
+      name,
+      description,
+      imageUrls: uploadResult.imageUrls,
+      videoUrl: videoUrl === '' ? null : videoUrl,
+      muscleGroup,
+      createdById: trainerId,
+    });
+    return mapCatalogExercise(exercise);
+  } catch (err) {
+    await mediaUploadService.deleteFilesByFileIds(uploadedFileIds);
+    throw err;
+  }
 }
 
 async function createDay({ trainerId, playerId, dayNumber, label }) {
@@ -174,7 +209,7 @@ async function deleteDay({ trainerId, dayId }) {
   await workoutRepo.deleteDay(dayId);
 }
 
-async function createExercise({ trainerId, dayId, name, description, imageUrls, videoUrl, muscleGroup, sortOrder }) {
+async function createExercise({ trainerId, dayId, name, description, imageFiles, videoUrl, muscleGroup, sortOrder }) {
   const day = await workoutRepo.findDayById(dayId);
   if (!day) {
     throw new AppError('Day not found', 404);
@@ -182,35 +217,36 @@ async function createExercise({ trainerId, dayId, name, description, imageUrls, 
   assertTrainerOwnsPlan(day.plan, trainerId);
   await ensureTrainerAssignedToPlayer({ trainerId, playerId: day.plan.playerId });
 
-  const exercise = await workoutRepo.createExercise({
-    dayId,
-    name,
-    description,
-    imageUrls,
-    videoUrl: videoUrl === '' ? null : videoUrl,
-    muscleGroup,
-    sortOrder,
-  });
+  let uploadedFileIds = [];
+  try {
+    const uploadResult = await uploadExerciseImages({ trainerId, files: imageFiles });
+    uploadedFileIds = uploadResult.uploadedFileIds;
 
-  await workoutRepo.createCatalogExercise({
-    name,
-    description,
-    imageUrls,
-    videoUrl: videoUrl === '' ? null : videoUrl,
-    muscleGroup,
-    createdById: trainerId,
-  });
+    const exercise = await workoutRepo.createExerciseAndCatalog({
+      dayId,
+      name,
+      description,
+      imageUrls: uploadResult.imageUrls,
+      videoUrl: videoUrl === '' ? null : videoUrl,
+      muscleGroup,
+      sortOrder,
+      createdById: trainerId,
+    });
 
-  return {
-    id: exercise.id,
-    dayId: exercise.dayId,
-    name: exercise.name,
-    description: exercise.description,
-    imageUrls: exercise.imageUrls,
-    videoUrl: exercise.videoUrl,
-    muscleGroup: exercise.muscleGroup,
-    sortOrder: exercise.sortOrder,
-  };
+    return {
+      id: exercise.id,
+      dayId: exercise.dayId,
+      name: exercise.name,
+      description: exercise.description,
+      imageUrls: exercise.imageUrls,
+      videoUrl: exercise.videoUrl,
+      muscleGroup: exercise.muscleGroup,
+      sortOrder: exercise.sortOrder,
+    };
+  } catch (err) {
+    await mediaUploadService.deleteFilesByFileIds(uploadedFileIds);
+    throw err;
+  }
 }
 
 async function createExerciseFromCatalog({ trainerId, dayId, sourceCatalogExerciseId, sourceExerciseId, sortOrder }) {
@@ -287,6 +323,7 @@ module.exports = {
   getAssignedPlan,
   getTrainerPlayerPlan,
   listCatalogExercises,
+  createCatalogExercise,
   createDay,
   updateDay,
   deleteDay,

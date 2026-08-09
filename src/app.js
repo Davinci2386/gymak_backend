@@ -12,10 +12,11 @@ const paymentRoutes = require('./modules/payment/routes/payment.routes');
 const notificationRoutes = require('./modules/notification/routes/notification.routes');
 const locationRoutes = require('./modules/location/routes/location.routes');
 const songRoutes = require('./modules/song/routes/song.routes');
+const postRoutes = require('./modules/post/routes/post.routes');
+const privacyPolicyRoutes = require('./modules/privacyPolicy/routes/privacyPolicy.routes');
 
 const app = express();
 
-// ⚠️ CRITICAL: Webhook must receive raw body for signature verification
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), (req, res, next) => {
   req.rawBody = req.body;
   express.json()(req, res, next);
@@ -39,6 +40,8 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/songs', songRoutes);
+app.use('/api/posts', postRoutes);
+app.use('/api/privacy-policy', privacyPolicyRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

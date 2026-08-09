@@ -11,6 +11,21 @@ function computeAge(birthDate) {
   return age;
 }
 
+function normalizeCertificates(certificates = [], files = []) {
+  const submitted = Array.isArray(certificates)
+    ? certificates
+    : certificates
+      ? [certificates]
+      : [];
+  const legacyFileNames = files.map((file) => file.originalname.slice(0, 200));
+
+  return [...new Set(
+    [...submitted, ...legacyFileNames]
+      .map((certificate) => certificate.trim())
+      .filter(Boolean),
+  )].slice(0, 20);
+}
+
 function sanitizeTrainer(user) {
   return {
     id: user.id,
@@ -25,13 +40,7 @@ function sanitizeTrainer(user) {
       ? {
         id: user.trainerProfile.id,
         description: user.trainerProfile.description,
-        certificates: user.trainerProfile.certificates?.map((c) => ({
-          id: c.id,
-          fileName: c.fileName,
-          mimeType: c.mimeType,
-          path: c.path,
-          createdAt: c.createdAt,
-        })) || [],
+        certificates: user.trainerProfile.certificates || [],
         createdAt: user.trainerProfile.createdAt,
         updatedAt: user.trainerProfile.updatedAt,
       }
@@ -45,7 +54,7 @@ async function register(req, res, next) {
   try {
     const { user, accessToken, refreshToken } = await trainerAuthService.registerTrainer({
       ...req.body,
-      certificates: req.files || [],
+      certificates: normalizeCertificates(req.body.certificates, req.files || []),
     });
 
     return ApiResponse.created(res, {

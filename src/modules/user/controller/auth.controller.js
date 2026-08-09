@@ -17,6 +17,8 @@ function sanitizeUser(user) {
     goals: user.goals ?? [],
     hasRoutine: user.hasRoutine ?? false,
     trainTime: user.trainTime ?? null,
+    heightCm: user.heightCm ?? 0,
+    weightKg: user.weightKg ?? 0,
     medical_condition: user.medicalCondition ?? null,
     injuries: user.injuries ?? null,
     medications: user.medications ?? null,

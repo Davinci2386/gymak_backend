@@ -7,6 +7,12 @@ const { AppError, UnauthorizedError } = require('../../../shared/errors');
 const adminRepo = require('../repository/admin.repository');
 const sessionRepo = require('../repository/session.repository');
 
+function ensureActiveAccount(admin) {
+  if (!admin || admin.accountStatus !== 'ACTIVE') {
+    throw new UnauthorizedError('This account is no longer active');
+  }
+}
+
 /**
  * Sign JWT access token for admin
  */
@@ -74,6 +80,7 @@ async function login({ email, password }) {
   if (!admin || admin.role !== 'ADMIN') {
     throw new UnauthorizedError('Invalid email or password');
   }
+  ensureActiveAccount(admin);
 
   const passwordMatches = await bcrypt.compare(password, admin.passwordHash);
   if (!passwordMatches) {
@@ -146,9 +153,10 @@ async function refresh({ refreshToken }) {
   if (!admin || admin.role !== 'ADMIN') {
     throw new UnauthorizedError('Invalid session');
   }
+  ensureActiveAccount(admin);
 
   // Revoke old session and create new one
-  await sessionRepo.revokeSessionByHash(refreshToken);
+  await sessionRepo.revokeSessionByHash(refreshTokenHash);
   const { accessToken, refreshToken: newRefreshToken } = await issueTokens(admin);
 
   return { admin, accessToken, refreshToken: newRefreshToken };

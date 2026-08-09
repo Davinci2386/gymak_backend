@@ -10,10 +10,11 @@ const ingredientSchema = Joi.object({
 const createMealSchema = Joi.object({
   section: Joi.string().valid('BREAKFAST', 'LUNCH', 'DINNER').required(),
   name: Joi.string().trim().min(1).required(),
-  imageUrl: Joi.string().trim().uri().required(),
   calories: Joi.number().integer().min(0).required(),
   ingredients: Joi.array().items(ingredientSchema).min(1).required(),
 });
+
+const createCatalogMealSchema = createMealSchema;
 
 const updateMealSchema = Joi.object({
   section: Joi.string().valid('BREAKFAST', 'LUNCH', 'DINNER'),
@@ -23,7 +24,14 @@ const updateMealSchema = Joi.object({
   ingredients: Joi.array().items(ingredientSchema).min(1),
 }).min(1);
 
+const addMealFromCatalogSchema = Joi.object({
+  sourceCatalogMealId: Joi.string().uuid(),
+  sourceMealId: Joi.string().uuid(),
+}).or('sourceCatalogMealId', 'sourceMealId');
+
 module.exports = {
+  createCatalogMealSchema,
   createMealSchema,
   updateMealSchema,
+  addMealFromCatalogSchema,
 };

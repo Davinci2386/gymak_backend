@@ -2,7 +2,10 @@ const { prisma } = require('../../../config');
 
 function listTrainers() {
   return prisma.user.findMany({
-    where: { role: 'TRAINER' },
+    where: {
+      role: 'TRAINER',
+      accountStatus: 'ACTIVE',
+    },
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,
@@ -19,4 +22,3 @@ function listTrainers() {
 }
 
 module.exports = { listTrainers };
-

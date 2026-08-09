@@ -10,12 +10,19 @@ const updateDaySchema = Joi.object({
   label: Joi.string().allow('', null),
 }).min(1);
 
-const createExerciseSchema = Joi.object({
+const exerciseFields = {
   name: Joi.string().trim().min(1).required(),
   description: Joi.string().allow('', null).default(''),
-  imageUrls: Joi.array().items(Joi.string().trim().min(1)).default([]),
   videoUrl: Joi.string().trim().allow('', null),
   muscleGroup: Joi.string().valid('BICEPS', 'TRICEPS', 'CHEST', 'LEGS', 'BACK', 'SHOULDERS', 'CARDIO').required(),
+};
+
+const createCatalogExerciseSchema = Joi.object({
+  ...exerciseFields,
+});
+
+const createExerciseSchema = Joi.object({
+  ...exerciseFields,
   sortOrder: Joi.number().integer().min(0),
 });
 
@@ -37,6 +44,7 @@ const addExerciseFromCatalogSchema = Joi.object({
 module.exports = {
   createDaySchema,
   updateDaySchema,
+  createCatalogExerciseSchema,
   createExerciseSchema,
   updateExerciseSchema,
   addExerciseFromCatalogSchema,

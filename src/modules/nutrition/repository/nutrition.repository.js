@@ -1,16 +1,20 @@
 const { prisma } = require('../../../config');
 
-const ingredientOrder = { orderBy: { sortOrder: 'asc' } };
-
-const mealInclude = {
-  ingredients: ingredientOrder,
+const assignedMealInclude = {
+  ingredients: { orderBy: { sortOrder: 'asc' } },
 };
 
-function findAllMealsWithIngredients() {
-  return prisma.nutritionMeal.findMany({
-    include: mealInclude,
-    orderBy: [{ section: 'asc' }, { name: 'asc' }],
-  });
+const catalogMealInclude = {
+  ingredients: { orderBy: { sortOrder: 'asc' } },
+};
+
+function mapIngredientCreateInput(ingredients) {
+  return ingredients.map((ing, index) => ({
+    name: ing.name,
+    quantity: ing.quantity,
+    calories: ing.calories,
+    sortOrder: ing.sortOrder ?? index,
+  }));
 }
 
 function findMealsForPlayerAndTrainer({ playerId, trainerId, section }) {
@@ -20,23 +24,46 @@ function findMealsForPlayerAndTrainer({ playerId, trainerId, section }) {
       trainerId,
       ...(section ? { section } : {}),
     },
-    include: mealInclude,
+    include: assignedMealInclude,
     orderBy: [{ section: 'asc' }, { name: 'asc' }],
-  });
-}
-
-function findMealsBySection(section) {
-  return prisma.nutritionMeal.findMany({
-    where: { section },
-    include: mealInclude,
-    orderBy: { name: 'asc' },
   });
 }
 
 function findMealById(id) {
   return prisma.nutritionMeal.findUnique({
     where: { id },
-    include: mealInclude,
+    include: assignedMealInclude,
+  });
+}
+
+function listCatalogMeals(section) {
+  return prisma.nutritionCatalogMeal.findMany({
+    where: section ? { section } : undefined,
+    include: catalogMealInclude,
+    orderBy: [{ section: 'asc' }, { name: 'asc' }, { createdAt: 'desc' }],
+  });
+}
+
+function findCatalogMealById(id) {
+  return prisma.nutritionCatalogMeal.findUnique({
+    where: { id },
+    include: catalogMealInclude,
+  });
+}
+
+function createCatalogMeal({ section, name, imageUrl, calories, ingredients, createdById }) {
+  return prisma.nutritionCatalogMeal.create({
+    data: {
+      section,
+      name,
+      imageUrl,
+      calories,
+      createdById: createdById ?? null,
+      ingredients: {
+        create: mapIngredientCreateInput(ingredients),
+      },
+    },
+    include: catalogMealInclude,
   });
 }
 
@@ -50,15 +77,45 @@ function createMeal({ playerId, trainerId, section, name, imageUrl, calories, in
       imageUrl,
       calories,
       ingredients: {
-        create: ingredients.map((ing, index) => ({
-          name: ing.name,
-          quantity: ing.quantity,
-          calories: ing.calories,
-          sortOrder: ing.sortOrder ?? index,
-        })),
+        create: mapIngredientCreateInput(ingredients),
       },
     },
-    include: mealInclude,
+    include: assignedMealInclude,
+  });
+}
+
+function createMealAndCatalog({ playerId, trainerId, section, name, imageUrl, calories, ingredients, createdById }) {
+  return prisma.$transaction(async (tx) => {
+    const meal = await tx.nutritionMeal.create({
+      data: {
+        playerId,
+        trainerId,
+        section,
+        name,
+        imageUrl,
+        calories,
+        ingredients: {
+          create: mapIngredientCreateInput(ingredients),
+        },
+      },
+      include: assignedMealInclude,
+    });
+
+    await tx.nutritionCatalogMeal.create({
+      data: {
+        section,
+        name,
+        imageUrl,
+        calories,
+        createdById: createdById ?? null,
+        ingredients: {
+          create: mapIngredientCreateInput(ingredients),
+        },
+      },
+      include: catalogMealInclude,
+    });
+
+    return meal;
   });
 }
 
@@ -77,15 +134,10 @@ function updateMeal(id, { name, imageUrl, calories, section, ingredients }) {
         data: {
           ...scalars,
           ingredients: {
-            create: ingredients.map((ing, index) => ({
-              name: ing.name,
-              quantity: ing.quantity,
-              calories: ing.calories,
-              sortOrder: ing.sortOrder ?? index,
-            })),
+            create: mapIngredientCreateInput(ingredients),
           },
         },
-        include: mealInclude,
+        include: assignedMealInclude,
       });
     });
   }
@@ -93,7 +145,7 @@ function updateMeal(id, { name, imageUrl, calories, section, ingredients }) {
   return prisma.nutritionMeal.update({
     where: { id },
     data: scalars,
-    include: mealInclude,
+    include: assignedMealInclude,
   });
 }
 
@@ -102,11 +154,13 @@ function deleteMeal(id) {
 }
 
 module.exports = {
-  findAllMealsWithIngredients,
   findMealsForPlayerAndTrainer,
-  findMealsBySection,
   findMealById,
+  listCatalogMeals,
+  findCatalogMealById,
+  createCatalogMeal,
   createMeal,
+  createMealAndCatalog,
   updateMeal,
   deleteMeal,
 };
