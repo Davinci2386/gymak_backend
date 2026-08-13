@@ -41,6 +41,12 @@
 | `POST` | `/api/notifications/tokens` | Yes | Register/update current device FCM token |
 | `DELETE` | `/api/notifications/tokens` | Yes | Delete current device FCM token |
 
+### Chat (`/api/chat`)
+
+| Method | Endpoint | Auth | Notes |
+|--------|----------|------|-------|
+| `GET` | `/api/chat/firebase-token` | Yes (`USER`/`TRAINER`) | Sync active assignment conversations and create a Firebase custom token using the backend user ID |
+
 ### Subscriptions & assignment (`/api/subscriptions`)
 
 | Method | Endpoint | Auth | Notes |
@@ -99,6 +105,7 @@
 | `/api/chat` | Chat |
 | `/api/payments` | Stripe webhook and payment helpers |
 | `/api/notifications` | Notifications |
+| `/api/chat` | Secure player/trainer chat authentication |
 | `/api/locations` | Locations / map |
 
 ### Admin Post Endpoints (`/api/admin`)

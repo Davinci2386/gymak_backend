@@ -49,6 +49,10 @@ function listActiveAssignmentsForTrainer(trainerId) {
           medicalCondition: true,
           injuries: true,
           medications: true,
+          profileImages: {
+            select: { url: true },
+            orderBy: { createdAt: 'asc' },
+          },
           createdAt: true,
         },
       },

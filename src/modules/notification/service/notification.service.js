@@ -1,4 +1,5 @@
 const { AppError } = require('../../../shared/errors');
+const { paginate, buildPaginationMeta } = require('../../../utils');
 const firebaseAdminService = require('../../../shared/services/firebaseAdmin.service');
 const notificationRepo = require('../repository/notification.repository');
 
@@ -33,6 +34,79 @@ async function registerDeviceToken({ userId, token, platform, deviceName }) {
 
 async function deleteDeviceToken({ userId, token }) {
   await notificationRepo.deleteDeviceToken({ userId, token });
+}
+
+function mapUserNotification(notification) {
+  return {
+    id: notification.id,
+    title: notification.title,
+    body: notification.body,
+    data: notification.data ?? {},
+    isRead: notification.readAt !== null,
+    readAt: notification.readAt,
+    createdAt: notification.createdAt,
+  };
+}
+
+function parseUnreadOnly(value) {
+  return value === true || value === 'true' || value === '1';
+}
+
+async function listMyNotifications({ userId, page, limit, unreadOnly }) {
+  const paginationInput = paginate({ page, limit });
+  const onlyUnread = parseUnreadOnly(unreadOnly);
+
+  const [notifications, totalItems, unreadCount] = await Promise.all([
+    notificationRepo.listUserNotifications({
+      userId,
+      unreadOnly: onlyUnread,
+      skip: paginationInput.skip,
+      take: paginationInput.perPage,
+    }),
+    notificationRepo.countUserNotifications({ userId, unreadOnly: onlyUnread }),
+    notificationRepo.countUnreadUserNotifications(userId),
+  ]);
+
+  return {
+    notifications: notifications.map(mapUserNotification),
+    unreadCount,
+    pagination: buildPaginationMeta({
+      currentPage: paginationInput.currentPage,
+      perPage: paginationInput.perPage,
+      totalItems,
+    }),
+  };
+}
+
+async function getUnreadCount(userId) {
+  return notificationRepo.countUnreadUserNotifications(userId);
+}
+
+async function markNotificationAsRead({ userId, notificationId }) {
+  const readAt = new Date();
+  const result = await notificationRepo.markUserNotificationAsRead({
+    userId,
+    notificationId,
+    readAt,
+  });
+
+  if (result.count === 0) {
+    throw new AppError('Notification not found', 404);
+  }
+
+  const notification = await notificationRepo.findUserNotificationById({
+    userId,
+    notificationId,
+  });
+  return mapUserNotification(notification);
+}
+
+async function markAllNotificationsAsRead(userId) {
+  const result = await notificationRepo.markAllUserNotificationsAsRead({
+    userId,
+    readAt: new Date(),
+  });
+  return result.count;
 }
 
 async function dispatchAndLog({
@@ -141,6 +215,13 @@ async function sendDirectNotification({
     throw new AppError(`${label} not found`, 404);
   }
 
+  const inboxNotification = await notificationRepo.createUserNotification({
+    userId: targetUserId,
+    title,
+    body,
+    data,
+  });
+
   const tokens = await notificationRepo.listDeviceTokensByUserId(targetUserId);
 
   const delivery = await dispatchAndLog({
@@ -155,6 +236,7 @@ async function sendDirectNotification({
 
   return {
     ...delivery,
+    inboxNotificationId: inboxNotification.id,
     recipient,
   };
 }
@@ -184,7 +266,17 @@ async function sendTrainerNotification({ adminId, trainerId, title, body, data }
 }
 
 async function sendBroadcastNotification({ adminId, audienceRole, title, body, data }) {
-  const deviceTokens = await notificationRepo.listDeviceTokensByAudience(audienceRole);
+  const [recipients, deviceTokens] = await Promise.all([
+    notificationRepo.listActiveRecipientsByAudience(audienceRole),
+    notificationRepo.listDeviceTokensByAudience(audienceRole),
+  ]);
+
+  const storedNotifications = await notificationRepo.createUserNotifications({
+    userIds: recipients.map((recipient) => recipient.id),
+    title,
+    body,
+    data,
+  });
 
   const delivery = await dispatchAndLog({
     adminId,
@@ -199,6 +291,7 @@ async function sendBroadcastNotification({ adminId, audienceRole, title, body, d
   return {
     ...delivery,
     audienceRole,
+    storedNotifications: storedNotifications.count,
     targetedDevices: deviceTokens.length,
   };
 }
@@ -206,6 +299,10 @@ async function sendBroadcastNotification({ adminId, audienceRole, title, body, d
 module.exports = {
   registerDeviceToken,
   deleteDeviceToken,
+  listMyNotifications,
+  getUnreadCount,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
   sendUserNotification,
   sendTrainerNotification,
   sendBroadcastNotification,

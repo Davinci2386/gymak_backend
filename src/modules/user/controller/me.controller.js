@@ -3,6 +3,7 @@ const { AppError } = require('../../../shared/errors');
 const userRepo = require('../repository/user.repository');
 const { sanitizeUser } = require('./auth.controller');
 const profileImageService = require('../service/profileImage.service');
+const chatService = require('../../chat/service/chat.service');
 
 async function me(req, res, next) {
   try {
@@ -79,11 +80,16 @@ async function deleteMe(req, res, next) {
       throw new AppError('Not authenticated', 401);
     }
 
+    const role = req.user.role;
+
     const deletedAccount = await userRepo.deleteAccountDataKeepFinancialWithOptions(userId, {
       deletionReason: 'Deleted by account owner',
     });
     if (!deletedAccount) {
       throw new AppError('User not found', 404);
+    }
+    if (role === 'USER' || role === 'TRAINER') {
+      await chatService.syncChatAccessForUser({ userId, role });
     }
 
     return ApiResponse.success(res, {

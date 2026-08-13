@@ -83,20 +83,20 @@ enum PostStatus {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  firstName    String
-  lastName     String
-  email        String    @unique
-  passwordHash String
-  role         Role      @default(USER)
-  accountStatus AccountStatus @default(ACTIVE)
-  gender       Gender?
-  birthDate    DateTime?
-  goals        String[]  @default([])
-  hasRoutine   Boolean   @default(false)
-  trainTime    String?
-  heightCm     Float     @default(0)
-  weightKg     Float     @default(0)
+  id               String        @id @default(uuid())
+  firstName        String
+  lastName         String
+  email            String        @unique
+  passwordHash     String
+  role             Role          @default(USER)
+  accountStatus    AccountStatus @default(ACTIVE)
+  gender           Gender?
+  birthDate        DateTime?
+  goals            String[]      @default([])
+  hasRoutine       Boolean       @default(false)
+  trainTime        String?
+  heightCm         Float         @default(0)
+  weightKg         Float         @default(0)
   medicalCondition String?
   injuries         String?
   medications      String?
@@ -107,25 +107,26 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sessions                UserSession[]
-  sentTrainerRequests     TrainerRequest[]         @relation("sentTrainerRequests")
-  receivedTrainerRequests TrainerRequest[]         @relation("receivedTrainerRequests")
-  playerAssignments       TrainerAssignment[]      @relation("playerAssignments")
-  trainerAssignments      TrainerAssignment[]      @relation("trainerAssignments")
-  trainerProfile          TrainerProfile?
-  subscriptions           Subscription[]
-  payments                Payment[]
-  workoutPlansAsPlayer    WorkoutPlan[]            @relation("playerWorkoutPlans")
-  workoutPlansAsTrainer   WorkoutPlan[]            @relation("trainerWorkoutPlans")
-  nutritionMealsAsPlayer  NutritionMeal[]          @relation("playerNutritionMeals")
-  nutritionMealsAsTrainer NutritionMeal[]          @relation("trainerNutritionMeals")
-  nutritionCatalogMealsCreated NutritionCatalogMeal[] @relation("trainerCreatedNutritionCatalogMeals")
-  songsCreated            Song[]                   @relation("adminCreatedSongs")
-  workoutCatalogExercises WorkoutCatalogExercise[]
-  profileImages           UserProfileImage[]
-  deviceTokens            DeviceToken[]
-  postsAuthored           Post[]                   @relation("trainerPosts")
-  reviewedPosts           Post[]                   @relation("adminReviewedPosts")
+  sessions                     UserSession[]
+  sentTrainerRequests          TrainerRequest[]         @relation("sentTrainerRequests")
+  receivedTrainerRequests      TrainerRequest[]         @relation("receivedTrainerRequests")
+  playerAssignments            TrainerAssignment[]      @relation("playerAssignments")
+  trainerAssignments           TrainerAssignment[]      @relation("trainerAssignments")
+  trainerProfile               TrainerProfile?
+  subscriptions                Subscription[]
+  payments                     Payment[]
+  workoutPlansAsPlayer         WorkoutPlan[]            @relation("playerWorkoutPlans")
+  workoutPlansAsTrainer        WorkoutPlan[]            @relation("trainerWorkoutPlans")
+  nutritionMealsAsPlayer       NutritionMeal[]          @relation("playerNutritionMeals")
+  nutritionMealsAsTrainer      NutritionMeal[]          @relation("trainerNutritionMeals")
+  nutritionCatalogMealsCreated NutritionCatalogMeal[]   @relation("trainerCreatedNutritionCatalogMeals")
+  songsCreated                 Song[]                   @relation("adminCreatedSongs")
+  workoutCatalogExercises      WorkoutCatalogExercise[]
+  profileImages                UserProfileImage[]
+  deviceTokens                 DeviceToken[]
+  userNotifications            UserNotification[]
+  postsAuthored                Post[]                   @relation("trainerPosts")
+  reviewedPosts                Post[]                   @relation("adminReviewedPosts")
 
   @@index([email])
   @@index([accountStatus])
@@ -162,25 +163,40 @@ model DeviceToken {
 }
 
 model NotificationLog {
-  id              String               @id @default(uuid())
+  id               String                 @id @default(uuid())
   createdByAdminId String?
-  targetType      NotificationTargetType
-  targetUserId    String?
-  audienceRole    Role?
-  title           String
-  body            String
-  data            Json?
-  sentCount       Int                  @default(0)
-  failedCount     Int                  @default(0)
-  status          NotificationLogStatus @default(SENT)
-  failureReason   String?
-  createdAt       DateTime             @default(now())
+  targetType       NotificationTargetType
+  targetUserId     String?
+  audienceRole     Role?
+  title            String
+  body             String
+  data             Json?
+  sentCount        Int                    @default(0)
+  failedCount      Int                    @default(0)
+  status           NotificationLogStatus  @default(SENT)
+  failureReason    String?
+  createdAt        DateTime               @default(now())
 
   @@index([createdByAdminId])
   @@index([targetType])
   @@index([targetUserId])
   @@index([audienceRole])
   @@index([createdAt])
+}
+
+model UserNotification {
+  id        String    @id @default(uuid())
+  userId    String
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
 }
 
 model Post {
@@ -412,16 +428,16 @@ model NutritionMeal {
 }
 
 model NutritionCatalogMeal {
-  id          String                     @id @default(uuid())
+  id          String                       @id @default(uuid())
   section     MealSection
   name        String
   imageUrl    String
   calories    Int
   createdById String?
-  createdAt   DateTime                   @default(now())
-  updatedAt   DateTime                   @updatedAt
+  createdAt   DateTime                     @default(now())
+  updatedAt   DateTime                     @updatedAt
   ingredients NutritionCatalogIngredient[]
-  createdBy   User?                      @relation("trainerCreatedNutritionCatalogMeals", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy   User?                        @relation("trainerCreatedNutritionCatalogMeals", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([section])
   @@index([name])

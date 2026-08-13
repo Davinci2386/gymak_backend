@@ -94,6 +94,7 @@ async function deleteAccountDataKeepFinancialWithOptions(userId, options = {}) {
     if (user.accountStatus === 'DELETED') return user;
 
     await tx.userSession.deleteMany({ where: { userId } });
+    await tx.userNotification.deleteMany({ where: { userId } });
     await tx.trainerRequest.deleteMany({
       where: {
         OR: [{ playerId: userId }, { trainerId: userId }],

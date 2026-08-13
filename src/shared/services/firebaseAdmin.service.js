@@ -35,6 +35,11 @@ function getFirebaseApp() {
   });
 }
 
+function getFirestore() {
+  getFirebaseApp();
+  return admin.firestore();
+}
+
 function chunkTokens(tokens) {
   const chunks = [];
   for (let index = 0; index < tokens.length; index += MAX_TOKENS_PER_BATCH) {
@@ -83,6 +88,17 @@ async function sendMulticastNotification({ tokens, title, body, data = {} }) {
   };
 }
 
+async function createCustomToken({ userId, role }) {
+  if (!userId) {
+    throw new AppError('A user id is required to create a Firebase token', 500);
+  }
+
+  const claims = role ? { role: String(role).toUpperCase() } : {};
+  return getFirebaseApp().auth().createCustomToken(String(userId), claims);
+}
+
 module.exports = {
+  createCustomToken,
+  getFirestore,
   sendMulticastNotification,
 };

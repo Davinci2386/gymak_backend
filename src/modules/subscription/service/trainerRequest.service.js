@@ -2,6 +2,7 @@ const { AppError } = require('../../../shared/errors');
 const trainerRequestRepo = require('../repository/trainerRequest.repository');
 const assignmentRepo = require('../repository/assignment.repository');
 const userRepo = require('../../user/repository/user.repository');
+const chatService = require('../../chat/service/chat.service');
 
 async function requestTrainer({ playerId, trainerId }) {
   if (playerId === trainerId) {
@@ -44,6 +45,10 @@ async function approveRequest({ trainerId, requestId }) {
   await assignmentRepo.endActiveAssignmentForPlayer(req.playerId);
   const assignment = await assignmentRepo.createAssignment({ playerId: req.playerId, trainerId: req.trainerId });
   await trainerRequestRepo.updateStatus(requestId, 'APPROVED');
+  await chatService.syncChatAccessForUser({
+    userId: req.playerId,
+    role: 'USER',
+  });
 
   return assignment;
 }
@@ -138,8 +143,22 @@ async function getMyTrainerStatus(playerId) {
   };
 }
 
+function mapTrainerPlayerAssignment(assignment) {
+  const { player, ...assignmentData } = assignment;
+  const { profileImages = [], ...playerData } = player || {};
+
+  return {
+    ...assignmentData,
+    player: {
+      ...playerData,
+      profileImageUrls: profileImages.map((image) => image.url).filter(Boolean),
+    },
+  };
+}
+
 async function listTrainerPlayers(trainerId) {
-  return assignmentRepo.listActiveAssignmentsForTrainer(trainerId);
+  const assignments = await assignmentRepo.listActiveAssignmentsForTrainer(trainerId);
+  return assignments.map(mapTrainerPlayerAssignment);
 }
 
 module.exports = {

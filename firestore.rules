@@ -1,0 +1,126 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasRole(role) {
+      return signedIn() && request.auth.token.role == role;
+    }
+
+    function validConversationId(conversationId, data) {
+      return conversationId ==
+        'player_' + data.playerId + '__trainer_' + data.trainerId;
+    }
+
+    function isConversationMember(data) {
+      return (hasRole('USER') && request.auth.uid == data.playerId) ||
+        (hasRole('TRAINER') && request.auth.uid == data.trainerId);
+    }
+
+    function activeConversation(data) {
+      return data.assignmentStatus == 'ACTIVE';
+    }
+
+    match /conversations/{conversationId} {
+      allow get: if isConversationMember(resource.data) &&
+        activeConversation(resource.data) &&
+        validConversationId(conversationId, resource.data);
+
+      allow list: if hasRole('TRAINER') &&
+        request.query.limit <= 100 &&
+        resource.data.trainerId == request.auth.uid &&
+        activeConversation(resource.data);
+
+      // Conversation documents are provisioned only by the trusted backend
+      // after it verifies an ACTIVE TrainerAssignment in PostgreSQL.
+      allow create, delete: if false;
+
+      allow update: if isConversationMember(resource.data) &&
+        activeConversation(resource.data) &&
+        validConversationId(conversationId, resource.data) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'lastMessage',
+          'lastMessageId',
+          'lastMessageAt',
+          'lastSenderId',
+          'updatedAt'
+        ]) &&
+        request.resource.data.lastSenderId == request.auth.uid &&
+        request.resource.data.lastMessageId is string &&
+        request.resource.data.lastMessage is string &&
+        request.resource.data.lastMessage.size() > 0 &&
+        request.resource.data.lastMessage.size() <= 2000 &&
+        getAfter(
+          /databases/$(database)/documents/conversations/$(conversationId)/messages/$(request.resource.data.lastMessageId)
+        ).data.senderId == request.auth.uid &&
+        getAfter(
+          /databases/$(database)/documents/conversations/$(conversationId)/messages/$(request.resource.data.lastMessageId)
+        ).data.text == request.resource.data.lastMessage &&
+        getAfter(
+          /databases/$(database)/documents/conversations/$(conversationId)/messages/$(request.resource.data.lastMessageId)
+        ).data.sentAt == request.time &&
+        request.resource.data.lastMessageAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+
+      match /messages/{messageId} {
+        function conversation() {
+          return get(/databases/$(database)/documents/conversations/$(conversationId)).data;
+        }
+
+        allow get: if isConversationMember(conversation()) &&
+          activeConversation(conversation()) &&
+          validConversationId(conversationId, conversation());
+
+        allow list: if request.query.limit <= 100 &&
+          isConversationMember(conversation()) &&
+          activeConversation(conversation()) &&
+          validConversationId(conversationId, conversation());
+
+        allow create: if isConversationMember(conversation()) &&
+          activeConversation(conversation()) &&
+          validConversationId(conversationId, conversation()) &&
+          request.resource.data.keys().hasOnly([
+            'senderId',
+            'receiverId',
+            'text',
+            'type',
+            'sentAt',
+            'clientSentAt'
+          ]) &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.resource.data.receiverId == (
+            request.auth.uid == conversation().playerId
+              ? conversation().trainerId
+              : conversation().playerId
+          ) &&
+          request.resource.data.type == 'text' &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 &&
+          request.resource.data.text.size() <= 2000 &&
+          request.resource.data.sentAt == request.time &&
+          request.resource.data.clientSentAt is timestamp &&
+          getAfter(
+            /databases/$(database)/documents/conversations/$(conversationId)
+          ).data.lastMessageId == messageId &&
+          getAfter(
+            /databases/$(database)/documents/conversations/$(conversationId)
+          ).data.lastSenderId == request.auth.uid &&
+          getAfter(
+            /databases/$(database)/documents/conversations/$(conversationId)
+          ).data.lastMessage == request.resource.data.text &&
+          getAfter(
+            /databases/$(database)/documents/conversations/$(conversationId)
+          ).data.lastMessageAt == request.time;
+
+        allow update, delete: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

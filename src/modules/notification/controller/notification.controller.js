@@ -33,6 +33,67 @@ async function deleteDeviceToken(req, res, next) {
   }
 }
 
+async function listMyNotifications(req, res, next) {
+  try {
+    const result = await notificationService.listMyNotifications({
+      userId: req.user.id,
+      page: req.query.page,
+      limit: req.query.limit,
+      unreadOnly: req.query.unreadOnly,
+    });
+
+    return ApiResponse.success(res, {
+      message: 'Notifications retrieved successfully',
+      data: {
+        notifications: result.notifications,
+        unreadCount: result.unreadCount,
+      },
+      pagination: result.pagination,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function getUnreadCount(req, res, next) {
+  try {
+    const unreadCount = await notificationService.getUnreadCount(req.user.id);
+    return ApiResponse.success(res, {
+      message: 'Unread notifications count retrieved successfully',
+      data: { unreadCount },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function markNotificationAsRead(req, res, next) {
+  try {
+    const notification = await notificationService.markNotificationAsRead({
+      userId: req.user.id,
+      notificationId: req.params.notificationId,
+    });
+    return ApiResponse.success(res, {
+      message: 'Notification marked as read',
+      data: { notification },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function markAllNotificationsAsRead(req, res, next) {
+  try {
+    const updatedCount = await notificationService.markAllNotificationsAsRead(req.user.id);
+    return ApiResponse.success(res, {
+      message: 'All notifications marked as read',
+      data: { updatedCount },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function sendUserNotification(req, res, next) {
   try {
     const result = await notificationService.sendUserNotification({
@@ -86,6 +147,10 @@ async function sendBroadcastNotification(req, res, next) {
 module.exports = {
   registerDeviceToken,
   deleteDeviceToken,
+  listMyNotifications,
+  getUnreadCount,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
   sendUserNotification,
   sendTrainerNotification,
   sendBroadcastNotification,
