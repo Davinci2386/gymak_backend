@@ -265,6 +265,28 @@ async function sendTrainerNotification({ adminId, trainerId, title, body, data }
   });
 }
 
+async function sendChatNotification({
+  recipientId,
+  recipientRole,
+  title,
+  body,
+  data,
+}) {
+  if (!['USER', 'TRAINER'].includes(recipientRole)) {
+    throw new AppError('Invalid chat notification recipient role', 500);
+  }
+
+  return sendDirectNotification({
+    adminId: null,
+    targetUserId: recipientId,
+    expectedRole: recipientRole,
+    targetType: recipientRole,
+    title,
+    body,
+    data,
+  });
+}
+
 async function sendBroadcastNotification({ adminId, audienceRole, title, body, data }) {
   const [recipients, deviceTokens] = await Promise.all([
     notificationRepo.listActiveRecipientsByAudience(audienceRole),
@@ -305,5 +327,6 @@ module.exports = {
   markAllNotificationsAsRead,
   sendUserNotification,
   sendTrainerNotification,
+  sendChatNotification,
   sendBroadcastNotification,
 };

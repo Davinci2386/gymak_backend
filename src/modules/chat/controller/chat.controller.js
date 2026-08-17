@@ -17,4 +17,26 @@ async function createFirebaseToken(req, res, next) {
   }
 }
 
-module.exports = { createFirebaseToken };
+async function sendMessage(req, res, next) {
+  try {
+    const result = await chatService.sendTextMessage({
+      senderId: req.user.id,
+      senderRole: req.user.role,
+      playerId: req.body.playerId,
+      text: req.body.text,
+      clientMessageId: req.body.clientMessageId,
+    });
+
+    return ApiResponse.success(res, {
+      statusCode: result.created ? 201 : 200,
+      message: result.created
+        ? 'Message sent successfully'
+        : 'Message already sent',
+      data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+module.exports = { createFirebaseToken, sendMessage };

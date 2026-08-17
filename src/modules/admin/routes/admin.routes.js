@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { validate, auth, authorize } = require('../../../middleware');
+const { validate, validateQuery, auth, authorize } = require('../../../middleware');
 const {
   adminLoginSchema,
   adminRegisterSchema,
@@ -9,6 +9,7 @@ const {
 } = require('../validators/admin.schemas');
 const adminController = require('../controller/admin.controller');
 const adminAnalyticsController = require('../controller/adminAnalytics.controller');
+const adminTransactionController = require('../controller/adminTransaction.controller');
 const adminAccountController = require('../controller/adminAccount.controller');
 const notificationController = require('../../notification/controller/notification.controller');
 const postController = require('../../post/controller/post.controller');
@@ -19,6 +20,7 @@ const {
 const { rejectPostSchema } = require('../../post/validators/post.schemas');
 const privacyPolicyController = require('../../privacyPolicy/controller/privacyPolicy.controller');
 const { updatePrivacyPolicySchema } = require('../../privacyPolicy/validators/privacyPolicy.schemas');
+const { listTransactionsQuerySchema } = require('../validators/adminTransaction.schemas');
 
 const router = Router();
 
@@ -68,6 +70,14 @@ router.get(
   auth,
   authorize('ADMIN'),
   adminAnalyticsController.getSubscriptionKpis
+);
+
+router.get(
+  '/transactions',
+  auth,
+  authorize('ADMIN'),
+  validateQuery(listTransactionsQuerySchema),
+  adminTransactionController.listTransactions
 );
 
 router.get('/users', auth, authorize('ADMIN'), adminAccountController.listUsers);

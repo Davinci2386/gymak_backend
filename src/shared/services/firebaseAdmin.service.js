@@ -67,6 +67,18 @@ async function sendMulticastNotification({ tokens, title, body, data = {} }) {
       tokens: tokenBatch,
       notification: { title, body },
       data,
+      android: {
+        priority: 'high',
+        notification: {
+          channelId: 'high_importance_channel',
+          sound: 'default',
+        },
+      },
+      apns: {
+        payload: {
+          aps: { sound: 'default' },
+        },
+      },
     });
 
     sentCount += response.successCount;
