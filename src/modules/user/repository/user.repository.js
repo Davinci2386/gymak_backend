@@ -5,8 +5,25 @@ function isMissingUserProfileImageTableError(error) {
   return message.includes('UserProfileImage') && message.includes('does not exist');
 }
 
-function findByEmail(email) {
-  return prisma.user.findUnique({ where: { email } });
+async function findByEmail(email) {
+  try {
+    return await prisma.user.findUnique({
+      where: { email },
+      include: {
+        profileImages: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+  } catch (error) {
+    if (!isMissingUserProfileImageTableError(error)) {
+      throw error;
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return null;
+    return { ...user, profileImages: [] };
+  }
 }
 
 async function findById(id) {

@@ -2,6 +2,7 @@ const errorHandler = require('./errorHandler');
 const notFound = require('./notFound');
 const { auth, authorize } = require('./auth');
 const validate = require('./validate');
+const validateQuery = require('./validateQuery');
 const requireActiveAssignment = require('./requireActiveAssignment');
 const { checkActiveSubscription, checkSubscriptionPlan } = require('./subscription');
 
@@ -11,6 +12,7 @@ module.exports = {
   auth,
   authorize,
   validate,
+  validateQuery,
   requireActiveAssignment,
   checkActiveSubscription,
   checkSubscriptionPlan,

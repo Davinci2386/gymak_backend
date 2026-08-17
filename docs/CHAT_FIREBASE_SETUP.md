@@ -9,7 +9,9 @@ The user app, trainer app, and backend must use the same Firebase project.
 - Messages: `conversations/{conversationId}/messages`
 - `playerId` and `trainerId` are the PostgreSQL user UUIDs.
 - The backend provisions conversation documents only for ACTIVE trainer assignments.
-- Clients can only update the last-message preview and atomically create one matching message.
+- Clients read messages from Firestore in real time. Message writes go through
+  `POST /api/chat/messages` so the backend can validate the assignment and
+  notify the recipient.
 
 ## Required setup
 
@@ -27,3 +29,7 @@ The user app, trainer app, and backend must use the same Firebase project.
 
 The trainer conversation-list index can take a few minutes to finish building
 after deployment.
+
+Both Flutter apps must register their FCM device token through
+`POST /api/notifications/tokens`. The chat message endpoint stores an inbox
+notification and sends an FCM push to every registered device of the recipient.

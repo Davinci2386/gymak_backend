@@ -8,11 +8,8 @@ RUN npm ci --include=dev
 
 COPY . .
 
-# Prisma config expects DATABASE_URL during generate (build-time only)
-ENV DATABASE_URL="postgresql://workout_user:workout_pass@localhost:5432/workout_db"
-
-RUN npm exec prisma generate
+RUN DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" npm exec prisma generate
 
 EXPOSE 3000
 
-CMD ["node", "src/server.js"]
+CMD ["npm", "run", "start:prod"]

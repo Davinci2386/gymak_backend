@@ -38,32 +38,9 @@ service cloud.firestore {
       // after it verifies an ACTIVE TrainerAssignment in PostgreSQL.
       allow create, delete: if false;
 
-      allow update: if isConversationMember(resource.data) &&
-        activeConversation(resource.data) &&
-        validConversationId(conversationId, resource.data) &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'lastMessage',
-          'lastMessageId',
-          'lastMessageAt',
-          'lastSenderId',
-          'updatedAt'
-        ]) &&
-        request.resource.data.lastSenderId == request.auth.uid &&
-        request.resource.data.lastMessageId is string &&
-        request.resource.data.lastMessage is string &&
-        request.resource.data.lastMessage.size() > 0 &&
-        request.resource.data.lastMessage.size() <= 2000 &&
-        getAfter(
-          /databases/$(database)/documents/conversations/$(conversationId)/messages/$(request.resource.data.lastMessageId)
-        ).data.senderId == request.auth.uid &&
-        getAfter(
-          /databases/$(database)/documents/conversations/$(conversationId)/messages/$(request.resource.data.lastMessageId)
-        ).data.text == request.resource.data.lastMessage &&
-        getAfter(
-          /databases/$(database)/documents/conversations/$(conversationId)/messages/$(request.resource.data.lastMessageId)
-        ).data.sentAt == request.time &&
-        request.resource.data.lastMessageAt == request.time &&
-        request.resource.data.updatedAt == request.time;
+      // Messages are written by the backend so every accepted message can
+      // create an inbox notification and an FCM push exactly once.
+      allow update: if false;
 
       match /messages/{messageId} {
         function conversation() {
@@ -79,43 +56,7 @@ service cloud.firestore {
           activeConversation(conversation()) &&
           validConversationId(conversationId, conversation());
 
-        allow create: if isConversationMember(conversation()) &&
-          activeConversation(conversation()) &&
-          validConversationId(conversationId, conversation()) &&
-          request.resource.data.keys().hasOnly([
-            'senderId',
-            'receiverId',
-            'text',
-            'type',
-            'sentAt',
-            'clientSentAt'
-          ]) &&
-          request.resource.data.senderId == request.auth.uid &&
-          request.resource.data.receiverId == (
-            request.auth.uid == conversation().playerId
-              ? conversation().trainerId
-              : conversation().playerId
-          ) &&
-          request.resource.data.type == 'text' &&
-          request.resource.data.text is string &&
-          request.resource.data.text.size() > 0 &&
-          request.resource.data.text.size() <= 2000 &&
-          request.resource.data.sentAt == request.time &&
-          request.resource.data.clientSentAt is timestamp &&
-          getAfter(
-            /databases/$(database)/documents/conversations/$(conversationId)
-          ).data.lastMessageId == messageId &&
-          getAfter(
-            /databases/$(database)/documents/conversations/$(conversationId)
-          ).data.lastSenderId == request.auth.uid &&
-          getAfter(
-            /databases/$(database)/documents/conversations/$(conversationId)
-          ).data.lastMessage == request.resource.data.text &&
-          getAfter(
-            /databases/$(database)/documents/conversations/$(conversationId)
-          ).data.lastMessageAt == request.time;
-
-        allow update, delete: if false;
+        allow create, update, delete: if false;
       }
     }
 
